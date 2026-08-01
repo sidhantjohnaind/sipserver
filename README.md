@@ -10,6 +10,9 @@ No Docker. No Asterisk. No cloud. Runs as a single binary.
 
 - **Zero-dependency binary** — single executable for Windows, Linux x86_64, and Linux ARM64
 - **Embedded Native OTP Provisioner** — automatically requests OTP and provisions credentials directly from your Jio router without needing Python
+- **Dual Transport Support (UDP & TLS)**:
+  - Local Listener: Standard UDP (`5061`) + Encrypted TLS (`5062` / `LOCAL_TLS_PORT`) for softphones
+  - Upstream Transport: TLS v1.2 (`5068`) to Jio IMS router/ONT
 - **Automatic SIP registration** with Jio IMS over TLS with self-healing credential rotation recovery
 - **Full call flow bridging** — outgoing calls, incoming calls, BYE, CANCEL, re-INVITE
 - **Multi-network support** — LAN, Tailscale, ZeroTier, WireGuard, OpenVPN
@@ -72,8 +75,8 @@ sudo ./install_linux_service.sh
 
 | Setting | Value |
 |---|---|
-| SIP Server / Domain | `<your-pc-ip>:5061` |
-| Transport | UDP |
+| SIP Server / Domain | `<your-pc-ip>:5061` (UDP) or `<your-pc-ip>:5062` (TLS) |
+| Transport | UDP or TLS |
 | Username | any (e.g. `101`) |
 | Password | any |
 
@@ -84,8 +87,8 @@ sudo ./install_linux_service.sh
 ## Architecture
 
 ```
-Softphone (SIP/UDP)
-  ↕  port 5061
+Softphone (SIP/UDP or SIP/TLS)
+  ↕  UDP port 5061 / TLS port 5062
 [B2BUA]  ←── .env credentials
   ↕  TLS port 5068
 Jio IMS / ONT (192.168.29.1)
@@ -94,7 +97,7 @@ PSTN / Phone Numbers
 ```
 
 The B2BUA acts as a full SIP proxy:
-- Listens on UDP `5061` for local softphones
+- Listens on UDP `5061` and TLS `5062` for local softphones
 - Registers upstream with Jio IMS over TLS `5068`
 - Bridges all call legs transparently
 - Rewrites `Contact` and `SDP` headers per-call to match the correct network interface
