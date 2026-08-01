@@ -30,9 +30,12 @@ b2bua_wsl
 *.rsp
 
 # ============================================================
-# Third-party source (large — download separately)
+# Third-party source
 # ============================================================
-third_party/
+# pjproject is large (~200MB) — download separately (see README)
+third_party/pjproject-2.15.1/
+# opencore-amr IS included in this repo (small, needed for Windows MSVC build)
+# third_party/opencore-amr/ ← NOT excluded
 
 # ============================================================
 # OS / Editor junk
