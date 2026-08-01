@@ -192,14 +192,26 @@ Tested and working:
 
 ---
 
-## Credits & Acknowledgments
+## Acknowledgements
 
-This project builds upon the foundational research and contributions of the open-source VoIP community:
+This project stands on the shoulders of prior reverse-engineering and open-source telephony work. Huge thanks to:
 
+- **[JFC-Group](https://github.com/JFC-Group)** — the community that first mapped out how JioFiber's JUICE/IMS client provisions and registers. In particular **[JFC-microsip](https://github.com/JFC-Group/JFC-microsip)** (the provisioning/config flow that `jfc_configure.py` derives from) and the JFC pjproject work that proved the patch path. Without their groundwork the `+sip.instance` shape, the OTP whitelist flow, and the rotating-password behaviour would have stayed a black box.
 - **[ankurpandeyvns/jiofiber-sip-proxy](https://hub.docker.com/r/ankurpandeyvns/jiofiber-sip-proxy)** — Special thanks to Ankur Pandey for reverse-engineering the Jio router HTTP provisioner API, OTP authorization flow, and SIP IMS auth parameters.
 - **[sivatheja10/jiofiber-bridge](https://github.com/sivatheja10/jiofiber-bridge)** — Special thanks to Siva Theja for initial SIP bridge research and protocol flow analysis.
-- **[Teluu / PJSIP Team](https://www.pjsip.org/)** — For the open-source SIP protocol stack and PJSUA2 C/C++ libraries.
-- **Martin Storsjö** — For the `opencore-amr` wrapper libraries enabling AMR-NB and AMR-WB audio codec support.
+- **[pjproject / PJSIP](https://github.com/pjsip/pjproject)** — the SIP/media stack the B2BUA is built on; the patches here are small deltas against it.
+- **[opencore-amr](https://sourceforge.net/projects/opencore-amr/)** — the AMR-NB/AMR-WB codec that makes IMS audio interoperate with plain softphones.
+- **[Tailscale](https://tailscale.com)** / **[WireGuard](https://www.wireguard.com/)** — the overlay network glue enabling remote calling.
+
+This repo's contribution is the native end-to-end integration — a single-binary self-healing B2BUA that solves inbound call routing, correct AMR `mode-set` echo, automatic multi-interface RTP routing (Tailscale/LAN), and zero-SSD-wear RAM logging.
+
+If you built on something here or spot missing attribution, please open an issue or PR.
+
+---
+
+## Disclaimer
+
+This software interoperates with your **own** telephone line for **personal** use, the same way the official app on your own router does. It reimplements a client to a service you pay for. Check your provider's terms; you are responsible for how you use it. Provided as-is, no warranty. Not affiliated with, or endorsed by, any ISP or provider.
 
 ---
 
