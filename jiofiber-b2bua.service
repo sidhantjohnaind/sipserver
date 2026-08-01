@@ -1,0 +1,16 @@
+[Unit]
+Description=JioFiber SIP Back-to-Back User Agent Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/jiofiber-b2bua
+ExecStart=/opt/jiofiber-b2bua/bin/b2bua
+Restart=always
+RestartSec=5s
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
