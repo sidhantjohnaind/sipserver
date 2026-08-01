@@ -34,17 +34,17 @@ Go to [Releases](../../releases) and download the binary for your platform:
 
 ### 2. Provision credentials (one-time)
 
-Run the Python provisioner to extract your SIP credentials from the Jio router automatically:
+The provisioner is **built directly into the binary**. Simply launch `b2bua` and it will automatically prompt for your Jio router IP and OTP if `.env` does not exist:
 
-```bash
-python create_env_jfibersip.py
-```
+- When launched for the first time, it prompts for your Jio router IP (usually `192.168.29.1`).
+- Enter the OTP sent to your registered Jio mobile number.
+- It automatically whitelists your device, fetches your SIP credentials, and saves `.env`.
 
-- Enter your Jio router IP (usually `192.168.29.1`)
-- Enter the OTP sent to your Jio registered mobile number
-- A `.env` file is created automatically with all credentials
-
-Or copy `.env.example` to `.env` and fill in manually.
+> **Optional**: If you prefer to provision manually via Python before running the binary, you can run:
+> ```bash
+> python create_env_jfibersip.py
+> ```
+> Or copy `.env.example` to `.env` and fill in manually.
 
 ### 3. Run
 
