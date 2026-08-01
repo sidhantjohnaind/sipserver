@@ -100,27 +100,50 @@ The B2BUA acts as a full SIP proxy:
 
 ## Building from Source
 
-### Prerequisites
+> **Note**: We do **not** modify any PJSIP source files. All B2BUA logic is in `src/b2bua.cpp` only, which uses the standard PJSIP public API. You can use a completely stock, unmodified PJSIP download.
 
-Download [PJSIP 2.15.1](https://github.com/pjsip/pjproject/releases/tag/2.15.1) and extract to `third_party/pjproject-2.15.1/`.
+### Step 1 — Download stock PJSIP 2.15.1
 
-**Windows (MSVC):**
+Download the official release and extract it:
+
+```bash
+# Option A: GitHub release
+wget https://github.com/pjsip/pjproject/archive/refs/tags/2.15.1.tar.gz
+tar -xzf 2.15.1.tar.gz
+mkdir -p third_party
+mv pjproject-2.15.1 third_party/
+
+# Option B: Direct source zip (Windows)
+# Download from: https://github.com/pjsip/pjproject/releases/tag/2.15.1
+# Extract to: third_party\pjproject-2.15.1\
+```
+
+### Step 2 — Build
+
+**Windows (MSVC — no MinGW/WSL needed):**
 ```cmd
 python src/build_msvc_pjsip.py
 ```
 Output: `bin/windows-x64/b2bua_msvc.exe`
 
-**Linux x86_64 (via WSL):**
+**Linux x86_64:**
 ```bash
 python3 src/build_wsl.py
 cp b2bua_wsl bin/linux-amd64/b2bua
 ```
 
-**Linux ARM64 (cross-compile via WSL):**
+**Linux ARM64 (cross-compile):**
 ```bash
+# Install cross-compiler first:
+sudo apt install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
 python3 src/build_arm64.py
 ```
 Output: `bin/linux-arm64/b2bua`
+
+### What the build scripts do
+
+The build scripts (`src/build_*.py`) compile **unmodified PJSIP 2.15.1** source alongside our single `src/b2bua.cpp` file and link everything into a single standalone executable. No system PJSIP install is needed.
 
 ---
 
