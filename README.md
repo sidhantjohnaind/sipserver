@@ -118,7 +118,19 @@ mv pjproject-2.15.1 third_party/
 # Extract to: third_party\pjproject-2.15.1\
 ```
 
-### Step 2 — Build
+### Step 2 — Apply Jio IMS Compatibility Patches
+
+Run the automated cross-platform patch script once after extracting PJSIP:
+
+```bash
+python apply_patches.py
+```
+
+This applies two small compatibility patches to PJSIP 2.15.1:
+1. `opencore_amr.c`: Enforces octet-aligned AMR, sets bitrate to 12.2kbps (Mode 7), echoes `mode-set` in SDP, and disables VAD for Jio IMS.
+2. `stream.c`: Enables trace logging for jitter buffer frame retrieval.
+
+### Step 3 — Build
 
 **Windows (MSVC — no MinGW/WSL needed):**
 ```cmd
@@ -143,7 +155,7 @@ Output: `bin/linux-arm64/b2bua`
 
 ### What the build scripts do
 
-The build scripts (`src/build_*.py`) compile **unmodified PJSIP 2.15.1** source alongside our single `src/b2bua.cpp` file and link everything into a single standalone executable. No system PJSIP install is needed.
+The build scripts (`src/build_*.py`) compile PJSIP 2.15.1 source alongside our single `src/b2bua.cpp` file and link everything into a single standalone executable. No system PJSIP install is needed.
 
 ---
 
