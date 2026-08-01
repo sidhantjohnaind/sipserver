@@ -347,9 +347,18 @@ static bool run_cpp_otp_provisioner() {
     std::string uuid = "00000000-0000-1000-8000-" + mac_clean;
 
     std::cout << "[b2bua] Device Hostname: " << hostname << ", MAC: " << mac << std::endl;
-    std::cout << "[b2bua] Requesting OTP from Jio Router at 192.168.29.1..." << std::endl;
+    std::cout << "[b2bua] Enter Jio Router IP [192.168.29.1]: ";
+    std::cout.flush();
 
-    std::string host = "192.168.29.1";
+    std::string host_input;
+    std::getline(std::cin, host_input);
+    host_input = trim(host_input);
+    if (host_input.empty()) {
+        if (std::cin.peek() == '\n') std::cin.get();
+        host_input = "192.168.29.1";
+    }
+    std::string host = host_input.empty() ? "192.168.29.1" : host_input;
+    std::cout << "[b2bua] Requesting OTP from Jio Router at " << host << "..." << std::endl;
     std::string add_req_path = "/?terminal_sw_version=RCSAndrd&terminal_vendor=" + hostname +
         "&terminal_model=" + hostname + "&SMS_port=0&act_type=volatile&IMSI=&msisdn=&IMEI=&vers=0&token=&rcs_state=0&rcs_version=5.1B&rcs_profile=joyn_blackbird&client_vendor=JUIC&default_sms_app=2&default_vvm_app=0&device_type=vvm&client_version=JSEAndrd-1.0&mac_address=" +
         mac + "&alias=" + hostname + "&nwk_intf=wifi&op_type=add";
