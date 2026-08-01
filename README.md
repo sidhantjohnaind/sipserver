@@ -192,6 +192,16 @@ Tested and working:
 
 ---
 
+## Credits & Acknowledgments
+
+This project builds upon the foundational research and contributions of the open-source VoIP community:
+
+- **[Teluu / PJSIP Team](https://www.pjsip.org/)** — For the open-source SIP protocol stack and PJSUA2 C/C++ libraries.
+- **Martin Storsjö** — For the `opencore-amr` wrapper libraries enabling AMR-NB and AMR-WB audio codec support.
+- **JioFiber VoIP Community & Early Contributors** — Special thanks to earlier developers who reverse-engineered the Jio Router TR-069 / HTTP provisioner API and SIP digest auth parameters (OTP flow, user-agent whitelisting, and IMS realm structure).
+
+---
+
 ## License
 
 MIT License — see [LICENSE](LICENSE)
