@@ -1,0 +1,48 @@
+# ============================================================
+# SECRETS — never commit real credentials
+# ============================================================
+.env
+.env.bak
+.envbk
+*.env.local
+
+# ============================================================
+# Build artifacts — compiled binaries & object files
+# ============================================================
+msvc_objs/
+msvc_objs.rsp
+wsl_objs/
+arm64_objs/
+__pycache__/
+*.pyc
+*.pyo
+
+# Root-level build outputs (use bin/ for final releases)
+b2bua_msvc.exe
+b2bua_wsl
+*.obj
+*.o
+*.a
+*.lib
+*.exp
+*.pdb
+*.ilk
+*.rsp
+
+# ============================================================
+# Third-party source (large — download separately)
+# ============================================================
+third_party/
+
+# ============================================================
+# OS / Editor junk
+# ============================================================
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+.vscode/
+.idea/
+*.suo
+*.user
