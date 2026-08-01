@@ -1,0 +1,18 @@
+--- a/pjmedia/src/pjmedia/stream.c
++++ b/pjmedia/src/pjmedia/stream.c
+@@ -583,9 +583,14 @@
+             continue;
+         }
+ 
+-        /* Get frame from jitter buffer. */
+         pjmedia_jbuf_get_frame2(stream->jb, channel->out_pkt, &frame_size,
+                                 &frame_type, &bit_info);
++
++        if (frame_type != PJMEDIA_JB_NORMAL_FRAME) {
++            PJ_LOG(1, (THIS_FILE, "JB get_frame stream=%s type=%d size=%d", stream->port.info.name.ptr, frame_type, (int)frame_size));
++        } else {
++            PJ_LOG(1, (THIS_FILE, "JB get_frame stream=%s NORMAL size=%d", stream->port.info.name.ptr, (int)frame_size));
++        }
+ 
+ #if TRACE_JB
+         trace_jb_get(stream, frame_type, frame_size);
