@@ -9,14 +9,17 @@ No Docker. No Asterisk. No cloud. Runs as a single binary.
 ## Features
 
 - **Zero-dependency binary** — single executable for Windows, Linux x86_64, and Linux ARM64
-- **Automatic SIP registration** with Jio IMS over TLS
-- **Full call bridging** — outgoing calls, incoming calls, BYE, CANCEL, re-INVITE
+- **Embedded Native OTP Provisioner** — automatically requests OTP and provisions credentials directly from your Jio router without needing Python
+- **Automatic SIP registration** with Jio IMS over TLS with self-healing credential rotation recovery
+- **Full call flow bridging** — outgoing calls, incoming calls, BYE, CANCEL, re-INVITE
 - **Multi-network support** — LAN, Tailscale, ZeroTier, WireGuard, OpenVPN
-  - Automatically detects the correct local IP per-call using OS routing table
-  - No static IP configuration needed
+  - Per-call dynamic source IP detection using OS kernel routing table (`getsockname` connect trick)
+  - Solves one-way audio and call teardown failures across VPN overlays
+  - Zero static IP configuration needed
+- **Robust Teardown Handling** — clean SIP `CANCEL` & `BYE` handling without double-hangup assertions
 - **PUBLISH / presence** passthrough for softphone status
 - **Zero SSD wear logging** — 512 KB RAM ring-buffer + Windows Named Pipe (`\\.\pipe\jio_b2bua_logs`)
-- **Codec support** — AMR-NB, PCMA, PCMU, telephone-event DTMF
+- **Codec support** — AMR-NB (octet-aligned mode-set), PCMA, PCMU, telephone-event DTMF
 
 ---
 
