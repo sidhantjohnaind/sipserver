@@ -197,7 +197,7 @@ Tested and working:
 This project builds upon the foundational research and contributions of the open-source VoIP community:
 
 - **[ankurpandeyvns/jiofiber-sip-proxy](https://hub.docker.com/r/ankurpandeyvns/jiofiber-sip-proxy)** — Special thanks to Ankur Pandey for reverse-engineering the Jio router HTTP provisioner API, OTP authorization flow, and SIP IMS auth parameters.
-- **[jiofiber-bridge](jiofiber-bridge)** — For initial SIP bridge research and protocol flow analysis.
+- **[sivatheja10/jiofiber-bridge](https://github.com/sivatheja10/jiofiber-bridge)** — Special thanks to Siva Theja for initial SIP bridge research and protocol flow analysis.
 - **[Teluu / PJSIP Team](https://www.pjsip.org/)** — For the open-source SIP protocol stack and PJSUA2 C/C++ libraries.
 - **Martin Storsjö** — For the `opencore-amr` wrapper libraries enabling AMR-NB and AMR-WB audio codec support.
 
