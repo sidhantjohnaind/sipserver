@@ -80,6 +80,8 @@ sudo ./install_linux_service.sh
 | Username | any (e.g. `101`) |
 | Password | any |
 
+> **TLS / Linphone Note**: If using **TLS** transport on port `5062`, make sure to turn **OFF** *"Verify Server Certificate"* (or enable *"Allow Self-Signed Certificates"*) in Linphone / softphone settings, as the local TLS listener uses a self-signed certificate.
+>
 > **Tailscale users**: Use your Tailscale IP (e.g. `100.x.x.x:5061`) as the SIP server in your softphone. The B2BUA automatically detects and uses the correct Tailscale interface.
 
 ---
