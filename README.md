@@ -100,7 +100,7 @@ The B2BUA acts as a full SIP proxy:
 
 ## Building from Source
 
-> **Note**: We do **not** modify any PJSIP source files. All B2BUA logic is in `src/b2bua.cpp` only, which uses the standard PJSIP public API. You can use a completely stock, unmodified PJSIP download.
+> **Note**: Stock PJSIP 2.15.1 is used with two small Jio IMS compatibility patches provided in `patches/` (applied automatically using `python apply_patches.py`). All B2BUA proxy logic is contained in `src/b2bua.cpp`.
 
 ### Step 1 — Download stock PJSIP 2.15.1
 
