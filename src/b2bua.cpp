@@ -44,6 +44,12 @@ typedef int SOCKET;
 
 extern "C" {
 #include <pjsua-lib/pjsua.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/x509.h>
+#include <openssl/pem.h>
+#include <openssl/rsa.h>
+#include <openssl/evp.h>
 }
 
 #define THIS_FILE       "b2bua.cpp"
@@ -52,6 +58,7 @@ extern "C" {
 static pjsua_acc_id g_loc_acc_id = PJSUA_INVALID_ID;
 static pjsua_acc_id g_up_acc_id  = PJSUA_INVALID_ID;
 static pjsua_transport_id g_udp_tid = PJSUA_INVALID_ID;
+static pjsua_transport_id g_loc_tls_tid = PJSUA_INVALID_ID;
 static pjsua_transport_id g_tls_tid = PJSUA_INVALID_ID;
 static bool g_running = true;
 
@@ -130,6 +137,54 @@ static bool is_env_valid() {
     const char *pass = getenv("SIP_PASSWORD");
     if (!pass || !*pass) pass = getenv("AUTH_PASS");
     return (pub && *pub && pass && *pass);
+}
+
+static bool file_exists(const std::string &filename) {
+    std::ifstream f(filename);
+    return f.good();
+}
+
+static bool generate_self_signed_cert(const std::string &cert_path, const std::string &key_path) {
+    EVP_PKEY *pkey = EVP_PKEY_new();
+    if (!pkey) return false;
+
+    RSA *rsa = RSA_generate_key(2048, RSA_F4, NULL, NULL);
+    if (!rsa) { EVP_PKEY_free(pkey); return false; }
+    EVP_PKEY_assign_RSA(pkey, rsa);
+
+    X509 *x509 = X509_new();
+    if (!x509) { EVP_PKEY_free(pkey); return false; }
+
+    ASN1_INTEGER_set(X509_get_serialNumber(x509), 1);
+    X509_gmtime_adj(X509_get_notBefore(x509), 0);
+    X509_gmtime_adj(X509_get_notAfter(x509), 315360000L);
+
+    X509_set_pubkey(x509, pkey);
+
+    X509_NAME *name = (X509_NAME*)X509_get_subject_name(x509);
+    X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, (const unsigned char*)"IN", -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, (const unsigned char*)"JioB2BUA", -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (const unsigned char*)"JioFiberB2BUA", -1, -1, 0);
+
+    X509_set_issuer_name(x509, name);
+    X509_sign(x509, pkey, EVP_sha256());
+
+    BIO *bio_key = BIO_new_file(key_path.c_str(), "w");
+    if (bio_key) {
+        PEM_write_bio_PrivateKey(bio_key, pkey, NULL, NULL, 0, NULL, NULL);
+        BIO_free(bio_key);
+    }
+
+    BIO *bio_cert = BIO_new_file(cert_path.c_str(), "w");
+    if (bio_cert) {
+        PEM_write_bio_X509(bio_cert, x509);
+        BIO_free(bio_cert);
+    }
+
+    X509_free(x509);
+    EVP_PKEY_free(pkey);
+    std::cout << "[b2bua] Generated self-signed TLS certificate: " << cert_path << " and key: " << key_path << std::endl;
+    return true;
 }
 
 /* ------------------------------------------------------------------ */
@@ -408,6 +463,33 @@ static bool run_cpp_otp_provisioner() {
         return false;
     }
 
+    std::cout << "\n[b2bua] OTP Verified Successfully!\n";
+    std::cout << "[b2bua] Local TLS Setup:\n";
+    std::cout << "  1) Disable Local TLS (UDP port 5061 only) [Default]\n";
+    std::cout << "  2) Enable Local TLS & generate brand new cert pair\n";
+    std::cout << "  3) Enable Local TLS & keep existing cert.pem from disk\n";
+    std::cout << "Select option [1, 2, or 3, default: 1]: ";
+    std::cout.flush();
+
+    std::string cert_choice;
+    if (std::cin.peek() == '\n') std::cin.get();
+    std::getline(std::cin, cert_choice);
+    cert_choice = trim(cert_choice);
+
+    std::string gen_new_flag = "0";
+    std::string enable_tls_flag = "0";
+
+    if (cert_choice == "2") {
+        enable_tls_flag = "1";
+        gen_new_flag = "1";
+    } else if (cert_choice == "3") {
+        enable_tls_flag = "1";
+        gen_new_flag = "0";
+    } else {
+        enable_tls_flag = "0";
+        gen_new_flag = "0";
+    }
+
     std::ofstream env_out(".env");
     if (!env_out.is_open()) return false;
 
@@ -417,6 +499,9 @@ static bool run_cpp_otp_provisioner() {
     env_out << "USER_AGENT=JSEAndrd-1.0\n";
     env_out << "IPV4_ADDRESS=192.168.29.195\n";
     env_out << "LOCAL_PORT=5061\n";
+    env_out << "LOCAL_TLS_PORT=5062\n";
+    env_out << "ENABLE_LOCAL_TLS=" << enable_tls_flag << "\n";
+    env_out << "GENERATE_NEW_TLS_CERT=" << gen_new_flag << "\n";
     env_out << "TLS_PORT=5068\n";
     env_out << "RTP_PORT=52000\n";
     env_out << "PUBLIC_ID=" << public_id << "\n";
@@ -827,7 +912,18 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
                acc_id));
 
     if (g_up_acc_id == PJSUA_INVALID_ID) {
-        PJ_LOG(1, (THIS_FILE, "Upstream account not registered. Rejecting call."));
+        PJ_LOG(1, (THIS_FILE, "Upstream account not initialized. Rejecting call."));
+        pjsua_call_answer(call_id, 503, NULL, NULL);
+        return;
+    }
+
+    /* Check if upstream account is actually registered (status 200) */
+    pjsua_acc_info up_ai;
+    pjsua_acc_get_info(g_up_acc_id, &up_ai);
+    if (up_ai.status != 200) {
+        std::cout << "[b2bua] WARNING: Rejecting call - Upstream Jio IMS is not registered (status=" 
+                  << up_ai.status << "). Please check router / registration." << std::endl;
+        PJ_LOG(1, (THIS_FILE, "Upstream account not registered (status=%d). Rejecting call 503.", up_ai.status));
         pjsua_call_answer(call_id, 503, NULL, NULL);
         return;
     }
@@ -938,6 +1034,8 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
     }
 }
 
+static int g_consecutive_503_count = 0;
+
 static void on_reg_state(pjsua_acc_id acc_id) {
     pjsua_acc_info ai;
     pjsua_acc_get_info(acc_id, &ai);
@@ -947,10 +1045,12 @@ static void on_reg_state(pjsua_acc_id acc_id) {
                (int)ai.status_text.slen, ai.status_text.ptr));
 
     if (ai.status == 200) {
+        g_consecutive_503_count = 0;
         std::cout << "\n===================================================\n";
         std::cout << "[b2bua] SUCCESS: Registered with Jio IMS!\n";
         std::cout << "===================================================\n\n";
     } else if (ai.status == 403) {
+        g_consecutive_503_count = 0;
         std::cout << "\n===================================================\n";
         std::cout << "[b2bua] ERROR 403: Device Not Whitelisted / Credentials Expired.\n";
         std::cout << "[b2bua] Triggering OTP re-authentication flow...\n";
@@ -958,6 +1058,22 @@ static void on_reg_state(pjsua_acc_id acc_id) {
         trigger_otp_flow();
         load_env_file(".env");
         pjsua_acc_set_registration(acc_id, PJ_TRUE);
+    } else if (ai.status == 503 || ai.status == 500) {
+        g_consecutive_503_count++;
+        std::cout << "\n===================================================\n";
+        std::cout << "[b2bua] WARNING " << ai.status << ": Connection Refused / Service Unavailable by Jio Router (attempt " 
+                  << g_consecutive_503_count << ").\n";
+        if (g_consecutive_503_count >= 2) {
+            std::cout << "[b2bua] Router port 5068 is refusing connection. Re-triggering OTP whitelisting flow...\n";
+            std::cout << "===================================================\n\n";
+            g_consecutive_503_count = 0;
+            trigger_otp_flow();
+            load_env_file(".env");
+            pjsua_acc_set_registration(acc_id, PJ_TRUE);
+        } else {
+            std::cout << "[b2bua] Will retry connection shortly. If persistent, check router IP or run OTP provisioner.\n";
+            std::cout << "===================================================\n\n";
+        }
     } else if (ai.status == 401) {
         std::cout << "[b2bua] Notice 401: Challenge received, sending MD5 credentials...\n";
     }
@@ -998,6 +1114,28 @@ int main(int argc, char *argv[]) {
 
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
+
+#ifdef _WIN32
+    wchar_t exe_path[MAX_PATH];
+    if (GetModuleFileNameW(NULL, exe_path, MAX_PATH)) {
+        std::wstring ws(exe_path);
+        size_t pos = ws.find_last_of(L"\\/");
+        if (pos != std::wstring::npos) {
+            SetCurrentDirectoryW(ws.substr(0, pos).c_str());
+        }
+    }
+#else
+    char exe_buf[1024];
+    ssize_t len = readlink("/proc/self/exe", exe_buf, sizeof(exe_buf) - 1);
+    if (len > 0) {
+        exe_buf[len] = '\0';
+        std::string path_str(exe_buf);
+        size_t pos = path_str.find_last_of('/');
+        if (pos != std::string::npos) {
+            chdir(path_str.substr(0, pos).c_str());
+        }
+    }
+#endif
 
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
@@ -1075,24 +1213,58 @@ int main(int argc, char *argv[]) {
     /* UDP Transport (Local softphones) */
     pjsua_transport_config udp_cfg;
     pjsua_transport_config_default(&udp_cfg);
-    int start_port = std::stoi(get_env_def("LOCAL_PORT", "5061"));
-    status = PJ_EUNKNOWN;
+    int local_port = std::stoi(get_env_def("LOCAL_PORT", "5061"));
+    udp_cfg.port = local_port;
 
-    for (int port = start_port; port < start_port + 10; ++port) {
-        udp_cfg.port = port;
-        status = pjsua_transport_create(PJSIP_TRANSPORT_UDP, &udp_cfg, &g_udp_tid);
-        if (status == PJ_SUCCESS) {
-            if (port != start_port) {
-                std::cout << "[b2bua] WARNING: Preferred port " << start_port << " was busy. Bound to UDP port " << port << std::endl;
-            }
-            break;
-        }
-    }
-
+    status = pjsua_transport_create(PJSIP_TRANSPORT_UDP, &udp_cfg, &g_udp_tid);
     if (status != PJ_SUCCESS) {
-        PJ_LOG(1, (THIS_FILE, "Error creating SIP UDP transport (ports %d-%d busy)", start_port, start_port + 9));
+        std::cout << "[b2bua] ERROR: Failed to bind to UDP port " << local_port << " (port already in use). Exiting." << std::endl;
+        PJ_LOG(1, (THIS_FILE, "Error creating SIP UDP transport on port %d", local_port));
         pjsua_destroy();
         return 1;
+    }
+
+    /* Local TLS Transport (For local softphones on port 5062) */
+    std::string enable_loc_tls = get_env_def("ENABLE_LOCAL_TLS", "1");
+    if (enable_loc_tls != "0" && enable_loc_tls != "false" && enable_loc_tls != "off") {
+        pjsua_transport_config loc_tls_cfg;
+        pjsua_transport_config_default(&loc_tls_cfg);
+        int local_tls_port = std::stoi(get_env_def("LOCAL_TLS_PORT", "5062"));
+        loc_tls_cfg.port = local_tls_port;
+#if defined(PJSIP_TLSV1_2_METHOD)
+        loc_tls_cfg.tls_setting.method = PJSIP_TLSV1_2_METHOD;
+#endif
+
+        std::string tls_cert = get_env_def("TLS_CERT_FILE", "cert.pem");
+        std::string tls_key  = get_env_def("TLS_KEY_FILE", "key.pem");
+        std::string force_gen = get_env_def("GENERATE_NEW_TLS_CERT", "0");
+
+        if (force_gen == "1" || force_gen == "true" || !file_exists(tls_cert) || !file_exists(tls_key)) {
+            std::cout << "[b2bua] Generating new TLS certificate pair..." << std::endl;
+            generate_self_signed_cert(tls_cert, tls_key);
+        } else {
+            std::cout << "[b2bua] Using existing TLS certificate from disk: " << tls_cert << std::endl;
+        }
+
+        if (file_exists(tls_cert) && file_exists(tls_key)) {
+            loc_tls_cfg.tls_setting.cert_file = pj_str((char*)tls_cert.c_str());
+            loc_tls_cfg.tls_setting.privkey_file = pj_str((char*)tls_key.c_str());
+            std::cout << "[b2bua] -> Copy '" << tls_cert << "' to your phone to install manually into Linphone / Phone CA Store." << std::endl;
+        }
+
+        loc_tls_cfg.tls_setting.verify_server = PJ_FALSE;
+        loc_tls_cfg.tls_setting.verify_client = PJ_FALSE;
+
+        pj_status_t loc_tls_status = pjsua_transport_create(PJSIP_TRANSPORT_TLS, &loc_tls_cfg, &g_loc_tls_tid);
+        if (loc_tls_status != PJ_SUCCESS) {
+            std::cout << "[b2bua] ERROR: Failed to bind to Local TLS port " << local_tls_port << " (port already in use). Exiting." << std::endl;
+            PJ_LOG(1, (THIS_FILE, "Error creating Local SIP TLS transport on port %d", local_tls_port));
+            pjsua_destroy();
+            return 1;
+        }
+        std::cout << "[b2bua] Enabled Local TLS listener on port " << local_tls_port << std::endl;
+    } else {
+        std::cout << "[b2bua] Local TLS listener disabled (UDP port 5061 only)" << std::endl;
     }
 
     /* TLS Transport (Jio Router Upstream) */
