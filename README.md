@@ -84,16 +84,15 @@ The provisioner is **built directly into the binary**. Simply launch `b2bua` and
 
 ### 3. Run
 
-**Windows (Interactive):**
-```cmd
-run_windows.bat
-```
+**Windows — 1-Click Setup (`JioFiber_B2BUA_Setup.exe`):**
+When running `JioFiber_B2BUA_Setup.exe`, you can choose between two modes:
+1. **Service Mode [Default]**: Installs and starts `JioFiberB2BUA` as an automatic Windows background service that starts on boot.
+2. **Non-Service / Interactive Console Mode**: Runs `b2bua_msvc.exe` directly in a visible command window with live log output.
 
-**Windows (Run as Background Service):**
-```cmd
-install_windows_service.bat    :: Install & Start Service
-uninstall_windows_service.bat  :: Stop & Remove Service
-```
+**Windows (Manual Batch Scripts):**
+- **Interactive Console Mode**: Double click `run_windows.bat`
+- **Background Service Mode**: Run `install_windows_service.bat` (as Administrator)
+- **Uninstall Service**: Run `uninstall_windows_service.bat` (as Administrator)
 
 **Linux / WSL (Interactive):**
 ```bash
