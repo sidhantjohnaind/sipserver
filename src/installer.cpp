@@ -70,7 +70,7 @@ int main() {
 
     bool is_service_mode = (choice != "2");
 
-    std::cout << "\n[*] Step 1/3: Copying application binaries...\n";
+    std::cout << "\n[*] Step 1/3: Copying application binaries & log viewer...\n";
     if (GetFileAttributesA(src_exe.c_str()) != INVALID_FILE_ATTRIBUTES) {
         CopyFileA(src_exe.c_str(), dst_exe.c_str(), FALSE);
     } else {
@@ -78,6 +78,26 @@ int main() {
         std::string dl_cmd = "powershell -Command \"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/b2bua_msvc.exe' -OutFile '" + dst_exe + "'\"";
         run_cmd(dl_cmd);
     }
+
+    // Write view_logs.bat to target directory
+    std::string view_logs_path = target_dir + "\\view_logs.bat";
+    std::ofstream vl_file(view_logs_path);
+    if (vl_file.is_open()) {
+        vl_file << "@echo off\n";
+        vl_file << "title JioFiber B2BUA Live Log Viewer\n";
+        vl_file << "color 0B\n";
+        vl_file << "echo =====================================================================\n";
+        vl_file << "echo    JioFiber B2BUA Live Log Stream (RAM Ring-Buffer / Named Pipe)\n";
+        vl_file << "echo =====================================================================\n";
+        vl_file << "echo.\n";
+        vl_file << "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$pipe = New-Object System.IO.Pipes.NamedPipeClientStream('.', 'jio_b2bua_logs', [System.IO.Pipes.PipeDirection]::In); Write-Host '[*] Connecting to log pipe...' -ForegroundColor Yellow; try { $pipe.Connect(5000); Write-Host '[*] Connected! Streaming live logs (Press Ctrl+C to exit)...' -ForegroundColor Green; $reader = New-Object System.IO.StreamReader($pipe); while ($null -ne ($line = $reader.ReadLine())) { Write-Host $line } } catch { Write-Host '[!] Could not connect to B2BUA log pipe. Is b2bua_msvc.exe running?' -ForegroundColor Red }\"\n";
+        vl_file << "pause\n";
+        vl_file.close();
+    }
+
+    // Create Desktop Shortcut for Log Viewer
+    std::string shortcut_cmd = "powershell -Command \"$s = (New-Object -ComObject WScript.Shell).CreateShortcut([Environment]::GetFolderPath('Desktop') + '\\JioFiber B2BUA Log Viewer.lnk'); $s.TargetPath = '" + view_logs_path + "'; $s.WorkingDirectory = '" + target_dir + "'; $s.Save()\"";
+    run_cmd(shortcut_cmd);
 
     std::cout << "[*] Step 2/3: Opening Windows Firewall ports...\n";
     run_cmd("netsh advfirewall firewall delete rule name=\"JioFiber B2BUA SIP UDP\" >nul 2>&1");
