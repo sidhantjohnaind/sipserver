@@ -49,15 +49,15 @@ Compared to earlier Python/Asterisk/Docker implementations (such as `jiofiber-si
 
 ### 1. Download a pre-built binary
 
-Go to [Releases](../../releases) and download the binary for your platform:
+Go to [Releases](https://github.com/sidhantjohnaind/sipserver/releases/tag/v1.0.0) and download the binary for your target platform:
 
-| Platform | File | Notes |
-|---|---|---|
-| Windows x64 | `b2bua_msvc.exe` (windows-x64) | ✅ Pre-built |
-| Windows ARM64 | `b2bua_msvc.exe` (windows-x64) | ✅ Runs via built-in x64 emulation (see note below) |
-| Linux x86_64 | `b2bua` (linux-amd64) | ✅ Pre-built |
-| Linux ARM64 | `b2bua` (linux-arm64) | ✅ Pre-built |
-| Linux RISC-V 64 | `b2bua` (linux-riscv64) | 🔧 Build from source (see below) |
+| Platform | Download Link | Binary Name | Notes |
+|---|---|---|---|
+| **Windows x64** | [📥 Download `b2bua_msvc.exe`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/b2bua_msvc.exe) | `b2bua_msvc.exe` (1.7 MB) | ✅ Zero-dependency native MSVC build |
+| **Windows ARM64** | [📥 Download `b2bua_msvc.exe`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/b2bua_msvc.exe) | `b2bua_msvc.exe` (1.7 MB) | ✅ Runs via Prism emulation (see note below) |
+| **Linux x86_64** | [📥 Download `b2bua-linux-amd64`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/b2bua-linux-amd64) | `b2bua-linux-amd64` (1.9 MB) | ✅ Pre-built standalone Linux binary |
+| **Linux ARM64** | [📥 Download `b2bua-linux-arm64`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/b2bua-linux-arm64) | `b2bua-linux-arm64` (1.8 MB) | ✅ Pre-built for Raspberry Pi / Routers |
+| **Linux RISC-V 64** | `b2bua` (linux-riscv64) | `b2bua` | 🔧 Build from source via `python src/build_riscv64.py` |
 
 > **Windows on ARM (Snapdragon X Elite / Surface Pro ARM / Windows 11 ARM64)**:
 > Windows 11 ARM64 includes Microsoft's **Prism x64 emulation engine** — the standard `b2bua_msvc.exe` (x64) runs on all Windows ARM devices with near-native speed and **zero configuration needed**. A native ARM64 build script ([`src/build_win_arm64.py`](src/build_win_arm64.py)) is also provided if you have the MSVC ARM64 cross-compile toolchain installed.
