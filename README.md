@@ -13,6 +13,8 @@ No Docker. No Asterisk. No cloud. Runs as a single binary.
 - **Dual Transport Support (UDP & TLS)**:
   - Local Listener: Standard UDP (`5061`) + Encrypted TLS (`5062` / `LOCAL_TLS_PORT`) for softphones
   - Upstream Transport: TLS v1.2 (`5068`) to Jio IMS router/ONT
+- **Local TLS Auto Certificate Generator**: Automatically creates 10-year 2048-bit RSA self-signed `cert.pem` and `key.pem` files on disk for encrypted softphone signaling
+- **Strict Port Binding**: Binds directly to `5061` and `5062` and exits immediately if either port is in use
 - **Automatic SIP registration** with Jio IMS over TLS with self-healing credential rotation recovery
 - **Full call flow bridging** — outgoing calls, incoming calls, BYE, CANCEL, re-INVITE
 - **Multi-network support** — LAN, Tailscale, ZeroTier, WireGuard, OpenVPN
@@ -32,11 +34,16 @@ No Docker. No Asterisk. No cloud. Runs as a single binary.
 
 Go to [Releases](../../releases) and download the binary for your platform:
 
-| Platform | File |
-|---|---|
-| Windows x64 | `b2bua_msvc.exe` |
-| Linux x86_64 | `b2bua` (linux-amd64) |
-| Linux ARM64 | `b2bua` (linux-arm64) |
+| Platform | File | Notes |
+|---|---|---|
+| Windows x64 | `b2bua_msvc.exe` (windows-x64) | ✅ Pre-built |
+| Windows ARM64 | `b2bua_msvc.exe` (windows-x64) | ✅ Runs via built-in x64 emulation (see note below) |
+| Linux x86_64 | `b2bua` (linux-amd64) | ✅ Pre-built |
+| Linux ARM64 | `b2bua` (linux-arm64) | ✅ Pre-built |
+| Linux RISC-V 64 | `b2bua` (linux-riscv64) | 🔧 Build from source (see below) |
+
+> **Windows on ARM (Snapdragon X Elite / Surface Pro ARM / Windows 11 ARM64)**:
+> Windows 11 ARM64 includes Microsoft's **Prism x64 emulation engine** — the standard `b2bua_msvc.exe` (x64) runs on all Windows ARM devices with near-native speed and **zero configuration needed**. A native ARM64 build script ([`src/build_win_arm64.py`](src/build_win_arm64.py)) is also provided if you have the MSVC ARM64 cross-compile toolchain installed.
 
 ### 2. Provision credentials (one-time)
 
@@ -44,7 +51,13 @@ The provisioner is **built directly into the binary**. Simply launch `b2bua` and
 
 - When launched for the first time, it prompts for your Jio router IP (usually `192.168.29.1`).
 - Enter the OTP sent to your registered Jio mobile number.
+- Prompt for Local TLS Certificate Setup:
+  - **Option 1 [Default]**: Generate a brand new TLS certificate pair (`cert.pem` & `key.pem`).
+  - **Option 2**: Keep & use existing `cert.pem` from disk.
+  - **Option 3**: Disable Local TLS (UDP port 5061 only mode).
 - It automatically whitelists your device, fetches your SIP credentials, and saves `.env`.
+
+> **Installing Certificate on Phone**: Copy `cert.pem` to your phone. Select it in Linphone under **Settings -> Advanced / TLS -> Root CA** or install it into your phone's **System CA Certificate Store** to enable **Secured 🔒** UI badge.
 
 > **Optional**: If you prefer to provision manually via Python before running the binary, you can run:
 > ```bash
@@ -54,22 +67,33 @@ The provisioner is **built directly into the binary**. Simply launch `b2bua` and
 
 ### 3. Run
 
-**Windows:**
+**Windows (Interactive):**
 ```cmd
 run_windows.bat
 ```
 
-**Linux / WSL:**
+**Windows (Run as Background Service):**
+```cmd
+install_windows_service.bat    :: Install & Start Service
+uninstall_windows_service.bat  :: Stop & Remove Service
+```
+
+**Linux / WSL (Interactive):**
 ```bash
 chmod +x run_wsl.sh
 ./run_wsl.sh
 ```
 
-**Linux (native, as service):**
+**Linux (Run as Background Service):**
 ```bash
-chmod +x install_linux_service.sh
-sudo ./install_linux_service.sh
+chmod +x install_linux_service.sh uninstall_linux_service.sh
+sudo ./install_linux_service.sh    # Install & Start Service
+sudo ./uninstall_linux_service.sh  # Stop & Remove Service
 ```
+
+> **Freeing Busy Ports (5061 / 5062)**: Both `run_windows.bat` and `run_wsl.sh` automatically terminate any stale background processes occupying ports 5061 or 5062 before starting. To manually free ports 5061 and 5062 at any time:
+> - **Windows**: Double-click `kill_ports.bat`
+> - **Linux / WSL**: Run `chmod +x kill_ports.sh && ./kill_ports.sh`
 
 ### 4. Configure your softphone
 
@@ -80,9 +104,9 @@ sudo ./install_linux_service.sh
 | Username | any (e.g. `101`) |
 | Password | any |
 
-> **TLS / Linphone Note**: If using **TLS** transport on port `5062`, make sure to turn **OFF** *"Verify Server Certificate"* (or enable *"Allow Self-Signed Certificates"*) in Linphone / softphone settings, as the local TLS listener uses a self-signed certificate.
+> **TLS / Linphone Note**: When using **TLS** transport on port `5062`, Linphone displays **Secured 🔒** once `cert.pem` is imported into Linphone or your phone's Trust Store.
 >
-> **Tailscale users**: Use your Tailscale IP (e.g. `100.x.x.x:5061`) as the SIP server in your softphone. The B2BUA automatically detects and uses the correct Tailscale interface.
+> **Tailscale users**: Use your Tailscale IP (e.g. `100.x.x.x:5061` or `100.x.x.x:5062`) as the SIP server in your softphone. The B2BUA automatically detects and uses the correct Tailscale interface.
 
 ---
 
@@ -140,11 +164,20 @@ This applies two small compatibility patches to PJSIP 2.15.1:
 
 ### Step 3 — Build
 
-**Windows (MSVC — no MinGW/WSL needed):**
+**Windows x64 (MSVC):**
 ```cmd
 python src/build_msvc_pjsip.py
 ```
 Output: `bin/windows-x64/b2bua_msvc.exe`
+
+**Windows ARM64 (MSVC cross-compile):**
+
+> **Prerequisite**: Install the **MSVC ARM64 build tools** component via Visual Studio Installer (`HostX64/arm64/cl.exe` must be present). Windows ARM64 devices can also just use the x64 binary via built-in Prism emulation.
+
+```cmd
+python src/build_win_arm64.py
+```
+Output: `bin/windows-arm64/b2bua_win_arm64.exe`
 
 **Linux x86_64:**
 ```bash
@@ -161,6 +194,18 @@ python3 src/build_arm64.py
 ```
 Output: `bin/linux-arm64/b2bua`
 
+**Linux RISC-V 64-bit (cross-compile):**
+
+> **Prerequisite**: Install the RISC-V cross-compiler toolchain first (not pre-installed by default).
+
+```bash
+# Install cross-compiler:
+sudo apt install gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
+
+python3 src/build_riscv64.py
+```
+Output: `bin/linux-riscv64/b2bua`
+
 ### What the build scripts do
 
 The build scripts (`src/build_*.py`) compile PJSIP 2.15.1 source alongside our single `src/b2bua.cpp` file and link everything into a single standalone executable. No system PJSIP install is needed.
@@ -169,10 +214,15 @@ The build scripts (`src/build_*.py`) compile PJSIP 2.15.1 source alongside our s
 
 ## Configuration Reference (`.env`)
 
-| Variable | Description | Example |
+| Variable | Description | Example / Default |
 |---|---|---|
 | `IPV4_ADDRESS` | Your PC's LAN IP | `192.168.29.195` |
 | `LOCAL_PORT` | UDP SIP port for softphones | `5061` |
+| `LOCAL_TLS_PORT` | Local TLS SIP port for softphones | `5062` |
+| `ENABLE_LOCAL_TLS` | Enable local TLS listener | `1` (or `0` to disable) |
+| `TLS_CERT_FILE` | Path to TLS Certificate file | `cert.pem` |
+| `TLS_KEY_FILE` | Path to TLS Private Key file | `key.pem` |
+| `GENERATE_NEW_TLS_CERT` | Force new cert pair on startup | `0` or `1` |
 | `TLS_PORT` | TLS port to Jio router | `5068` |
 | `RTP_PORT` | Base RTP port | `52000` |
 | `PUBLIC_ID` | Your Jio SIP URI | `sip:+91XXXXXXXXXX@br.wln.ims.jio.com` |
@@ -203,7 +253,7 @@ journalctl -u jiofiber-b2bua -f
 ## Supported Softphones
 
 Tested and working:
-- **Linphone** (Android / iOS / Desktop)
+- **Linphone** (Android / iOS / Desktop) — *Supports TLS port 5062 for Secured 🔒 status*
 - **Sipnetic** (Android)
 - **MicroSIP** (Windows)
 - **PhonerLite** (Windows)

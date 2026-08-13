@@ -5,6 +5,7 @@
 .env.bak
 .envbk
 *.env.local
+*.pem
 
 # ============================================================
 # Build artifacts — compiled binaries & object files
