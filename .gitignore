@@ -22,6 +22,7 @@ __pycache__/
 b2bua_msvc.exe
 b2bua_wsl
 JioFiber_B2BUA_Setup.exe
+JioFiber_B2BUA-x86_64.AppImage
 appimagetool-x86_64.AppImage
 AppDir/
 squashfs-root/
