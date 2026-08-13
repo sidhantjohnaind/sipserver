@@ -185,28 +185,33 @@ This applies two small compatibility patches to PJSIP 2.15.1:
 1. `opencore_amr.c`: Enforces octet-aligned AMR, sets bitrate to 12.2kbps (Mode 7), echoes `mode-set` in SDP, and disables VAD for Jio IMS.
 2. `stream.c`: Enables trace logging for jitter buffer frame retrieval.
 
-### Step 3 — Build
+### Step 3 — Build Binaries & 1-Click Installers
 
-**Windows x64 (MSVC):**
+**Windows x64 64-bit Setup Installer & Portable Binary:**
 ```cmd
-python src/build_msvc_pjsip.py
+python src/build_msvc_pjsip.py    :: Compiles b2bua_msvc.exe
+python src/build_installer.py     :: Compiles JioFiber_B2BUA_Setup_x64.exe
 ```
-Output: `bin/windows-x64/b2bua_msvc.exe`
+Output: `bin/windows-x64/b2bua_msvc.exe` & `JioFiber_B2BUA_Setup_x64.exe`
+
+**Windows x86 32-bit Setup Installer:**
+```cmd
+python src/build_installer_x86.py :: Compiles JioFiber_B2BUA_Setup_x86.exe
+```
+Output: `JioFiber_B2BUA_Setup_x86.exe`
 
 **Windows ARM64 (MSVC cross-compile):**
-
-> **Prerequisite**: Install the **MSVC ARM64 build tools** component via Visual Studio Installer (`HostX64/arm64/cl.exe` must be present). Windows ARM64 devices can also just use the x64 binary via built-in Prism emulation.
-
 ```cmd
 python src/build_win_arm64.py
 ```
 Output: `bin/windows-arm64/b2bua_win_arm64.exe`
 
-**Linux x86_64:**
+**Linux x86_64 Binary & Portable AppImage:**
 ```bash
 python3 src/build_wsl.py
-cp b2bua_wsl bin/linux-amd64/b2bua
+python3 scripts/build_appimage.py
 ```
+Output: `bin/linux-amd64/b2bua` & `JioFiber_B2BUA-x86_64.AppImage`
 
 **Linux ARM64 (cross-compile):**
 ```bash
@@ -218,9 +223,6 @@ python3 src/build_arm64.py
 Output: `bin/linux-arm64/b2bua`
 
 **Linux RISC-V 64-bit (cross-compile):**
-
-> **Prerequisite**: Install the RISC-V cross-compiler toolchain first (not pre-installed by default).
-
 ```bash
 # Install cross-compiler:
 sudo apt install gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
@@ -231,7 +233,7 @@ Output: `bin/linux-riscv64/b2bua`
 
 ### What the build scripts do
 
-The build scripts (`src/build_*.py`) compile PJSIP 2.15.1 source alongside our single `src/b2bua.cpp` file and link everything into a single standalone executable. No system PJSIP install is needed.
+The build scripts (`src/build_*.py` and `scripts/build_*.py`) compile PJSIP 2.15.1 source alongside `src/b2bua.cpp` and `src/installer.cpp`, packing everything into standalone binaries, 1-click Windows installers, and Linux AppImage packages. No system PJSIP install is needed.
 
 ---
 
