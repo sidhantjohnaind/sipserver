@@ -23,13 +23,18 @@ inc_cmd = " ".join([f'/I"{d}"' for d in inc_dirs])
 lib_flags = " ".join([f'/LIBPATH:"{d}"' for d in lib_dirs])
 sys_libs = 'Shell32.lib Advapi32.lib User32.lib Kernel32.lib'
 
+import shutil
+
+out_installer_x64 = os.path.join(root, 'JioFiber_B2BUA_Setup_x64.exe')
+
 cmd = f'"{cl_bin}" /O2 /EHsc /std:c++17 {inc_cmd} "{src_installer}" /Fe"{out_installer}" /link {lib_flags} {sys_libs}'
 
-print("Building Windows Setup Installer (JioFiber_B2BUA_Setup.exe)...")
+print("Building Windows x64 64-bit Setup Installer (JioFiber_B2BUA_Setup_x64.exe)...")
 res = subprocess.run(cmd, shell=True, capture_output=True, text=True)
 
 if os.path.exists(out_installer):
-    sz = os.path.getsize(out_installer)
-    print(f"=== SUCCESS! Built {out_installer} ({sz:,} bytes / {sz/1024:.0f} KB) ===")
+    shutil.copy(out_installer, out_installer_x64)
+    sz = os.path.getsize(out_installer_x64)
+    print(f"=== SUCCESS! Built {out_installer_x64} ({sz:,} bytes / {sz/1024:.0f} KB) ===")
 else:
     print("Compilation Error:\n", res.stderr)
