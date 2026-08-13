@@ -79,6 +79,25 @@ int main() {
         run_cmd(dl_cmd);
     }
 
+    // Copy existing configuration files if present
+    std::string src_env = std::string(current_dir) + "\\.env";
+    std::string dst_env = target_dir + "\\.env";
+    if (GetFileAttributesA(src_env.c_str()) != INVALID_FILE_ATTRIBUTES) {
+        CopyFileA(src_env.c_str(), dst_env.c_str(), FALSE);
+    }
+
+    std::string src_cert = std::string(current_dir) + "\\cert.pem";
+    std::string dst_cert = target_dir + "\\cert.pem";
+    if (GetFileAttributesA(src_cert.c_str()) != INVALID_FILE_ATTRIBUTES) {
+        CopyFileA(src_cert.c_str(), dst_cert.c_str(), FALSE);
+    }
+
+    std::string src_key = std::string(current_dir) + "\\key.pem";
+    std::string dst_key = target_dir + "\\key.pem";
+    if (GetFileAttributesA(src_key.c_str()) != INVALID_FILE_ATTRIBUTES) {
+        CopyFileA(src_key.c_str(), dst_key.c_str(), FALSE);
+    }
+
     // Write view_logs.bat to target directory
     std::string view_logs_path = target_dir + "\\view_logs.bat";
     std::ofstream vl_file(view_logs_path);
