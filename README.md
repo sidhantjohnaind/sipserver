@@ -54,6 +54,7 @@ Go to [Releases](https://github.com/sidhantjohnaind/sipserver/releases/tag/v1.0.
 | Platform | Download Link | Package Name | Type / Notes |
 |---|---|---|---|
 | **Windows x64 / ARM64 (1-Click Installer)** | [🚀 **Download Setup (`JioFiber_B2BUA_Setup.exe`)**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/JioFiber_B2BUA_Setup.exe) | `JioFiber_B2BUA_Setup.exe` (222 KB) | ⚡ **1-Click GUI Installer** (Auto-configures Firewall, Service & Shortcuts) |
+| **Windows x86 32-bit (1-Click Installer)** | [🚀 **Download 32-bit Setup (`JioFiber_B2BUA_Setup_x86.exe`)**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/JioFiber_B2BUA_Setup_x86.exe) | `JioFiber_B2BUA_Setup_x86.exe` (188 KB) | ⚡ **1-Click 32-bit Windows Installer** (Compatible with legacy Windows x86 systems) |
 | **Windows Portable** | [📥 Download `b2bua_msvc.exe`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/b2bua_msvc.exe) | `b2bua_msvc.exe` (1.7 MB) | ✅ Zero-dependency standalone MSVC binary |
 | **Linux x86_64 (AppImage)** | [🐧 **Download `JioFiber_B2BUA-x86_64.AppImage`**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/JioFiber_B2BUA-x86_64.AppImage) | `JioFiber_B2BUA-x86_64.AppImage` (835 KB) | ⚡ **1-Click Portable Linux AppImage** |
 | **Linux x86_64 Standalone** | [📥 Download `b2bua-linux-amd64`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/b2bua-linux-amd64) | `b2bua-linux-amd64` (1.9 MB) | ✅ Pre-built Linux binary |
