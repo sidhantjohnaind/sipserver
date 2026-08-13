@@ -21,9 +21,12 @@ if not exist ".env" (
     )
 )
 
-:: Step 2: Stop any stale background instances
-echo [*] Terminating any stale b2bua_msvc background processes...
+:: Step 2: Stop any stale background instances and free ports 5061 / 5062
+echo [*] Terminating stale b2bua processes & freeing ports 5061/5062...
 taskkill /F /IM b2bua_msvc.exe >nul 2>&1
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":5061 :5062"') do (
+    if not "%%a"=="0" taskkill /F /PID %%a >nul 2>&1
+)
 
 :: Step 3: Check if executable exists
 if not exist "bin\windows-x64\b2bua_msvc.exe" (
@@ -35,6 +38,7 @@ if not exist "bin\windows-x64\b2bua_msvc.exe" (
 :: Step 4: Run native Windows B2BUA executable
 echo [*] Starting JioFiber B2BUA Proxy...
 echo [*] Local Softphone UDP Listener: 192.168.29.195:5061
+echo [*] Local Softphone TLS Listener: 192.168.29.195:5062
 echo [*] Upstream Jio IMS TLS Target:  192.168.29.1:5068
 echo.
 echo Press Ctrl+C to stop the proxy.

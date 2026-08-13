@@ -1,20 +1,21 @@
 #!/bin/bash
 # =====================================================================
-# uninstall_linux_service.sh - Remove JioFiber B2BUA Systemd Service
+# uninstall_linux_service.sh - Remove JioFiber B2BUA systemd service
 # =====================================================================
 
 if [ "$EUID" -ne 0 ]; then
-    echo "[!] ERROR: Please run as root (sudo bash uninstall_linux_service.sh)"
-    exit 1
+  echo "[!] Please run as root (sudo ./uninstall_linux_service.sh)"
+  exit 1
 fi
 
-echo "[*] Stopping and disabling JioFiber B2BUA service..."
-systemctl stop jiofiber-b2bua.service 2>/dev/null || true
-systemctl disable jiofiber-b2bua.service 2>/dev/null || true
+echo "[*] Stopping and disabling jiofiber-b2bua service..."
+systemctl stop jiofiber-b2bua 2>/dev/null || true
+systemctl disable jiofiber-b2bua 2>/dev/null || true
+
+echo "[*] Removing /etc/systemd/system/jiofiber-b2bua.service..."
 rm -f /etc/systemd/system/jiofiber-b2bua.service
 systemctl daemon-reload
 
-echo "[*] Removing installation directory /opt/jiofiber-b2bua..."
-rm -rf /opt/jiofiber-b2bua
-
-echo "[SUCCESS] JioFiber B2BUA Linux Systemd Service removed."
+echo "====================================================================="
+echo "   [SUCCESS] JioFiber B2BUA systemd service removed!"
+echo "====================================================================="
