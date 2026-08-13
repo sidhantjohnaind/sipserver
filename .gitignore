@@ -21,6 +21,7 @@ __pycache__/
 # Root-level build outputs (use bin/ for final releases)
 b2bua_msvc.exe
 b2bua_wsl
+JioFiber_B2BUA_Setup.exe
 *.obj
 *.o
 *.a
