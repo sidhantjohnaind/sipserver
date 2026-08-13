@@ -77,13 +77,44 @@ The provisioner is **built directly into the binary**. Simply launch `b2bua` and
   - **Option 3**: Disable Local TLS (UDP port 5061 only mode).
 - It automatically whitelists your device, fetches your SIP credentials, and saves `.env`.
 
-> **Installing Certificate on Phone**: Copy `cert.pem` to your phone. Select it in Linphone under **Settings -> Advanced / TLS -> Root CA** or install it into your phone's **System CA Certificate Store** to enable **Secured 🔒** UI badge.
+> **Installing Certificate on Phone**: Copy `cert.pem` to your phone. Select it in Linphone under **Settings -> Network -> Advanced / TLS -> Root CA** or install it into your phone's **System CA Certificate Store** to enable **Secured 🔒** UI badge.
 
-> **Optional**: If you prefer to provision manually via Python before running the binary, you can run:
-> ```bash
-> python create_env_jfibersip.py
-> ```
-> Or copy `.env.example` to `.env` and fill in manually.
+---
+
+### How to Transfer & Install TLS Certificate (`cert.pem`) on Phone / Softphone
+
+When Local TLS is enabled on port `5062`, `b2bua` auto-generates `cert.pem` on disk. Transfer and install `cert.pem` to your phone to get the **Secured 🔒** encrypted status badge:
+
+#### 📱 Method 1: Transferring `cert.pem` to Your Phone
+* **Local Web Transfer (Fastest)**:
+  Run a quick local web server in your terminal folder:
+  ```bash
+  python -m http.server 8000
+  ```
+  On your phone browser, navigate to `http://<YOUR-PC-IP>:8000/cert.pem` and download `cert.pem`.
+* **Alternative Methods**: Copy `cert.pem` via USB cable, AirDrop, Google Drive, Email, or Local Storage.
+
+#### 🤖 Android (Linphone & System Store)
+1. **Inside Linphone App**:
+   * Open **Linphone** -> **Settings** ⚙️ -> **Network** -> **TLS / CA Certificates**.
+   * Tap **Root CA** -> Browse and select `cert.pem`.
+   * Set Account Transport to **TLS** with port `5062`.
+2. **Android System CA Store (Optional)**:
+   * Open Phone **Settings** -> **Security & Privacy** -> **More Security Settings** -> **Encryption & Credentials**.
+   * Tap **Install a Certificate** -> **CA Certificate** -> Select `cert.pem`.
+
+#### 🍏 iOS / iPhone (Linphone & Profile Trust)
+1. AirDrop or download `cert.pem` to the **Files app** on your iPhone.
+2. Tap `cert.pem` -> Notice pop-up: *"Profile Downloaded"*.
+3. Open iPhone **Settings** -> Tap **Profile Downloaded** -> Tap **Install** (Enter passcode).
+4. Enable Full Trust: Go to **Settings** -> **General** -> **About** -> **Certificate Trust Settings** -> Enable **Full Trust** for `JioFiberB2BUA`.
+5. Open **Linphone** -> **Settings** -> **Network** -> Set Transport to **TLS** (Port `5062`).
+
+#### 💻 Windows (MicroSIP & Linphone Desktop)
+* **MicroSIP**: Copy `cert.pem` into your MicroSIP folder. In MicroSIP Settings -> Network -> Check **TLS** and select `cert.pem` as CA file.
+* **Linphone Desktop**: Open Preferences -> Network -> Advanced -> Select `cert.pem` as Root CA.
+
+---
 
 ### 3. Run
 
