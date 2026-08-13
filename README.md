@@ -56,6 +56,7 @@ Go to [Releases](https://github.com/sidhantjohnaind/sipserver/releases/tag/v1.0.
 | **Windows x64 64-bit (1-Click Installer)** | [🚀 **Download 64-bit Setup (`JioFiber_B2BUA_Setup_x64.exe`)**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/JioFiber_B2BUA_Setup_x64.exe) | `JioFiber_B2BUA_Setup_x64.exe` (228 KB) | ⚡ **1-Click 64-bit Windows Installer** (Auto-configures Firewall, Service & Shortcuts) |
 | **Windows x86 32-bit (1-Click Installer)** | [🚀 **Download 32-bit Setup (`JioFiber_B2BUA_Setup_x86.exe`)**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/JioFiber_B2BUA_Setup_x86.exe) | `JioFiber_B2BUA_Setup_x86.exe` (188 KB) | ⚡ **1-Click 32-bit Windows Installer** (Compatible with legacy 32-bit Windows systems) |
 | **Windows Portable** | [📥 Download `b2bua_msvc.exe`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/b2bua_msvc.exe) | `b2bua_msvc.exe` (1.7 MB) | ✅ Zero-dependency standalone MSVC binary |
+| **Linux 1-Click Script (x86_64 / ARM64)** | [🐧 **Download `install_linux.sh`**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/install_linux.sh) | `install_linux.sh` (2.5 KB) | ⚡ **1-Click Linux Installer** (Auto-detects Arch, Firewall, Service) |
 | **Linux x86_64 (AppImage)** | [🐧 **Download `JioFiber_B2BUA-x86_64.AppImage`**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/JioFiber_B2BUA-x86_64.AppImage) | `JioFiber_B2BUA-x86_64.AppImage` (835 KB) | ⚡ **1-Click Portable Linux AppImage** |
 | **Linux x86_64 Standalone** | [📥 Download `b2bua-linux-amd64`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/b2bua-linux-amd64) | `b2bua-linux-amd64` (1.9 MB) | ✅ Pre-built Linux binary |
 | **Linux ARM64** | [📥 Download `b2bua-linux-arm64`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/b2bua-linux-arm64) | `b2bua-linux-arm64` (1.8 MB) | ✅ Pre-built for Raspberry Pi / Routers |
@@ -96,16 +97,21 @@ When running `JioFiber_B2BUA_Setup.exe`, you can choose between two modes:
 - **Background Service Mode**: Run `install_windows_service.bat` (as Administrator)
 - **Uninstall Service**: Run `uninstall_windows_service.bat` (as Administrator)
 
-**Linux / WSL (Interactive):**
+**Linux — 1-Click Terminal Installer:**
+Run this single command on any Linux terminal:
 ```bash
-chmod +x run_wsl.sh
-./run_wsl.sh
+curl -sSL https://raw.githubusercontent.com/sidhantjohnaind/sipserver/master/install_linux.sh | sudo bash
 ```
 
-**Linux (Run as Background Service):**
+**Linux — 1-Click AppImage Package:**
 ```bash
-chmod +x install_linux_service.sh uninstall_linux_service.sh
-sudo ./install_linux_service.sh    # Install & Start Service
+chmod +x JioFiber_B2BUA-x86_64.AppImage
+./JioFiber_B2BUA-x86_64.AppImage
+```
+
+**Linux / WSL (Manual Scripts):**
+```bash
+sudo ./install_linux.sh          # 1-Click Install & Start Systemd Service
 sudo ./uninstall_linux_service.sh  # Stop & Remove Service
 ```
 
