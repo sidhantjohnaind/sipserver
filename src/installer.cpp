@@ -60,7 +60,17 @@ int main() {
 
     std::string dst_exe = target_dir + "\\b2bua_msvc.exe";
 
-    std::cout << "[*] Step 1/3: Copying application binaries...\n";
+    std::cout << "Select Installation Mode:\n";
+    std::cout << "  [1] Service Mode (Auto-starts silently in background on Windows boot) [DEFAULT]\n";
+    std::cout << "  [2] Non-Service / Interactive Console Mode (Runs in visible window with live logs)\n\n";
+    std::cout << "Enter choice (1 or 2) [1]: ";
+
+    std::string choice;
+    std::getline(std::cin, choice);
+
+    bool is_service_mode = (choice != "2");
+
+    std::cout << "\n[*] Step 1/3: Copying application binaries...\n";
     if (GetFileAttributesA(src_exe.c_str()) != INVALID_FILE_ATTRIBUTES) {
         CopyFileA(src_exe.c_str(), dst_exe.c_str(), FALSE);
     } else {
@@ -77,24 +87,43 @@ int main() {
     run_cmd("netsh advfirewall firewall delete rule name=\"JioFiber B2BUA RTP Media UDP\" >nul 2>&1");
     run_cmd("netsh advfirewall firewall add rule name=\"JioFiber B2BUA RTP Media UDP\" dir=in action=allow protocol=UDP localport=52000-52200");
 
-    std::cout << "[*] Step 3/3: Installing & starting Windows Service...\n";
-    run_cmd("taskkill /F /IM b2bua_msvc.exe >nul 2>&1");
-    run_cmd("sc stop JioFiberB2BUA >nul 2>&1");
-    run_cmd("sc delete JioFiberB2BUA >nul 2>&1");
+    if (is_service_mode) {
+        std::cout << "[*] Step 3/3: Installing & starting Windows Service...\n";
+        run_cmd("taskkill /F /IM b2bua_msvc.exe >nul 2>&1");
+        run_cmd("sc stop JioFiberB2BUA >nul 2>&1");
+        run_cmd("sc delete JioFiberB2BUA >nul 2>&1");
 
-    std::string sc_cmd = "sc create JioFiberB2BUA binPath= \"\\\"" + dst_exe + "\\\"\" start= auto DisplayName= \"JioFiber SIP B2BUA Service\"";
-    run_cmd(sc_cmd);
-    run_cmd("sc description JioFiberB2BUA \"Lightweight native SIP B2BUA proxy for JioFiber VoIP\"");
-    run_cmd("sc start JioFiberB2BUA");
+        std::string sc_cmd = "sc create JioFiberB2BUA binPath= \"\\\"" + dst_exe + "\\\"\" start= auto DisplayName= \"JioFiber SIP B2BUA Service\"";
+        run_cmd(sc_cmd);
+        run_cmd("sc description JioFiberB2BUA \"Lightweight native SIP B2BUA proxy for JioFiber VoIP\"");
+        run_cmd("sc start JioFiberB2BUA");
 
-    std::cout << "\n=====================================================================\n";
-    std::cout << "   [SUCCESS] JioFiber B2BUA Setup Complete!\n";
-    std::cout << "   -------------------------------------------------------------------\n";
-    std::cout << "   Installed Path:  " << dst_exe << "\n";
-    std::cout << "   Service Status:  Running (Auto-Start on Windows Boot)\n";
-    std::cout << "   SIP UDP Port:    5061\n";
-    std::cout << "   SIP TLS Port:    5062\n";
-    std::cout << "=====================================================================\n\n";
+        std::cout << "\n=====================================================================\n";
+        std::cout << "   [SUCCESS] JioFiber B2BUA Installed & Running in SERVICE MODE!\n";
+        std::cout << "   -------------------------------------------------------------------\n";
+        std::cout << "   Installed Path:  " << dst_exe << "\n";
+        std::cout << "   Mode:            Windows Service (Starts on Boot)\n";
+        std::cout << "   SIP UDP Port:    5061\n";
+        std::cout << "   SIP TLS Port:    5062\n";
+        std::cout << "=====================================================================\n\n";
+    } else {
+        std::cout << "[*] Step 3/3: Configuring Non-Service / Interactive Console Mode...\n";
+        run_cmd("sc stop JioFiberB2BUA >nul 2>&1");
+        run_cmd("sc delete JioFiberB2BUA >nul 2>&1");
+        run_cmd("taskkill /F /IM b2bua_msvc.exe >nul 2>&1");
+
+        std::cout << "\n=====================================================================\n";
+        std::cout << "   [SUCCESS] JioFiber B2BUA Configured in INTERACTIVE CONSOLE MODE!\n";
+        std::cout << "   -------------------------------------------------------------------\n";
+        std::cout << "   Installed Path:  " << dst_exe << "\n";
+        std::cout << "   Mode:            Non-Service / Interactive Window\n";
+        std::cout << "   SIP UDP Port:    5061\n";
+        std::cout << "   SIP TLS Port:    5062\n";
+        std::cout << "=====================================================================\n\n";
+        std::cout << "[*] Launching JioFiber B2BUA interactively now...\n\n";
+        std::string launch_cmd = "start \"JioFiber B2BUA Interactive\" \"" + dst_exe + "\"";
+        run_cmd(launch_cmd);
+    }
     system("pause");
     return 0;
 }
