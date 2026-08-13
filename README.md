@@ -270,6 +270,19 @@ The build scripts (`src/build_*.py` and `scripts/build_*.py`) compile PJSIP 2.15
 
 ## Configuration Reference (`.env`)
 
+### File Storage Locations (`.env`, `cert.pem`, `key.pem`)
+
+Depending on how you run JioFiber B2BUA, your configuration (`.env`) and TLS certificate files (`cert.pem`, `key.pem`) are stored in the following locations:
+
+| Environment / Mode | Configuration (`.env`) & TLS Certificate Storage Path | Notes |
+|---|---|---|
+| **Windows Service Mode** | `C:\Program Files\JioFiberB2BUA\.env`<br>`C:\Program Files\JioFiberB2BUA\cert.pem`<br>`C:\Program Files\JioFiberB2BUA\key.pem` | ⚡ Setup Installer automatically copies existing `.env` & cert files to `C:\Program Files\JioFiberB2BUA\` during installation |
+| **Windows Portable / Console** | Same directory as `b2bua_msvc.exe` (e.g. `C:\YourFolder\.env`) | Reads `.env` & certs from the local execution folder |
+| **Linux Systemd Service** | Directory where `install_linux.sh` was executed (e.g. `/opt/jiofiber-b2bua/.env`) | `WorkingDirectory=$SCRIPT_DIR` configures systemd to use local folder |
+| **Linux Portable AppImage** | Same working directory where `./JioFiber_B2BUA-x86_64.AppImage` is launched | Reads `.env` & certs from the execution directory |
+
+### `.env` Variable Reference
+
 | Variable | Description | Example / Default |
 |---|---|---|
 | `IPV4_ADDRESS` | Your PC's LAN IP | `192.168.29.195` |
