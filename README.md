@@ -97,23 +97,22 @@ When running `JioFiber_B2BUA_Setup.exe`, you can choose between two modes:
 - **Background Service Mode**: Run `install_windows_service.bat` (as Administrator)
 - **Uninstall Service**: Run `uninstall_windows_service.bat` (as Administrator)
 
-**Linux — 1-Click Terminal Installer:**
-Run this single command on any Linux terminal:
+**Linux — 1-Click Systemd Service Installer:**
+Run this single command on any Linux terminal to install & start `jiofiber-b2bua` as an automatic background service (auto-starts on boot):
 ```bash
 curl -sSL https://raw.githubusercontent.com/sidhantjohnaind/sipserver/master/install_linux.sh | sudo bash
 ```
 
-**Linux — 1-Click AppImage Package:**
+**Linux — 1-Click Portable AppImage:**
 ```bash
 chmod +x JioFiber_B2BUA-x86_64.AppImage
 ./JioFiber_B2BUA-x86_64.AppImage
 ```
 
-**Linux / WSL (Manual Scripts):**
-```bash
-sudo ./install_linux.sh          # 1-Click Install & Start Systemd Service
-sudo ./uninstall_linux_service.sh  # Stop & Remove Service
-```
+**Linux Service Management:**
+- **Status Check**: `sudo systemctl status jiofiber-b2bua`
+- **View Live Logs**: `sudo journalctl -u jiofiber-b2bua -f`
+- **Uninstall Service**: `sudo ./uninstall_linux_service.sh`
 
 > **Freeing Busy Ports (5061 / 5062)**: Both `run_windows.bat` and `run_wsl.sh` automatically terminate any stale background processes occupying ports 5061 or 5062 before starting. To manually free ports 5061 and 5062 at any time:
 > - **Windows**: Double-click `kill_ports.bat`
