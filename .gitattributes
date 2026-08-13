@@ -16,3 +16,8 @@ Makefile text eol=lf
 *.obj binary
 *.a binary
 *.lib binary
+
+# GitHub Linguist Overrides — mark build scripts, tools & sniffer scripts as vendored so C++ is the primary repository language
+*.py linguist-vendored
+scripts/** linguist-vendored
+
