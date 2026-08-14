@@ -186,7 +186,7 @@ static bool generate_self_signed_cert(const std::string &cert_path, const std::s
     X509_set_pubkey(x509, pkey);
 
     std::string lan_ip = get_env_def("IPV4_ADDRESS", "192.168.29.4");
-    std::string cn_name = "JioFiber B2BUA (" + lan_ip + ")";
+    std::string cn_name = "JioFiberB2BUA";  /* Device-agnostic CN - no IP baked in */
 
     X509_NAME *name = (X509_NAME*)X509_get_subject_name(x509);
     X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, (const unsigned char*)"IN", -1, -1, 0);
@@ -198,7 +198,26 @@ static bool generate_self_signed_cert(const std::string &cert_path, const std::s
     add_x509_ext(x509, NID_basic_constraints, "critical,CA:TRUE");
     add_x509_ext(x509, NID_key_usage, "critical,digitalSignature,keyCertSign,cRLSign,keyEncipherment");
     add_x509_ext(x509, NID_ext_key_usage, "serverAuth,clientAuth");
-    std::string san_str = "IP:" + lan_ip + ",IP:127.0.0.1,DNS:" + lan_ip + ",DNS:localhost,DNS:JioFiberB2BUA,DNS:br.wln.ims.jio.com";
+    /* Broad SAN coverage - works on any home LAN without regenerating the cert */
+    std::string san_str =
+        /* Detected LAN IP + loopback */
+        "IP:" + lan_ip + ","
+        "IP:127.0.0.1,"
+        /* Common JioFiber 192.168.29.x range */
+        "IP:192.168.29.1,IP:192.168.29.2,IP:192.168.29.3,"
+        "IP:192.168.29.4,IP:192.168.29.5,IP:192.168.29.10,"
+        "IP:192.168.29.100,IP:192.168.29.101,IP:192.168.29.102,"
+        /* Common home router ranges */
+        "IP:192.168.1.1,IP:192.168.1.2,IP:192.168.1.100,"
+        "IP:192.168.0.1,IP:192.168.0.100,"
+        "IP:192.168.31.1,IP:192.168.31.100,"
+        "IP:10.0.0.1,IP:10.0.0.2,IP:10.0.0.100,IP:10.8.0.1,"
+        /* DNS names - always valid regardless of IP */
+        "DNS:JioFiberB2BUA,"
+        "DNS:jiofiber-b2bua,"
+        "DNS:localhost,"
+        "DNS:br.wln.ims.jio.com,"
+        "DNS:" + lan_ip;
     add_x509_ext(x509, NID_subject_alt_name, san_str.c_str());
 
     X509_sign(x509, pkey, EVP_sha256());

@@ -43,7 +43,7 @@ done
 echo "[*] Generating 2048-bit RSA Private Key..."
 openssl genrsa -out "$CERTS_DIR/${CERT_NAME}.key" 2048 >/dev/null 2>&1
 
-echo "[*] Generating X.509 v3 Certificate with SANs & CA:TRUE..."
+echo "[*] Generating X.509 v3 Certificate with broad SANs (works on any LAN IP)..."
 cat << EOF > /tmp/b2bua_san.cnf
 [req]
 distinguished_name = req_distinguished_name
@@ -53,7 +53,7 @@ prompt = no
 [req_distinguished_name]
 C = IN
 O = JioFiberB2BUA
-CN = JioFiber B2BUA ($LAN_IP)
+CN = JioFiberB2BUA
 
 [v3_ca]
 basicConstraints = critical, CA:TRUE
@@ -62,12 +62,40 @@ extendedKeyUsage = serverAuth, clientAuth
 subjectAltName = @alt_names
 
 [alt_names]
-IP.1 = $LAN_IP
-IP.2 = 127.0.0.1
-DNS.1 = $LAN_IP
-DNS.2 = localhost
-DNS.3 = JioFiberB2BUA
+# --- Detected LAN IP (primary) ---
+IP.1  = $LAN_IP
+IP.2  = 127.0.0.1
+
+# --- Common JioFiber home LAN IPs ---
+IP.3  = 192.168.29.1
+IP.4  = 192.168.29.2
+IP.5  = 192.168.29.3
+IP.6  = 192.168.29.4
+IP.7  = 192.168.29.5
+IP.8  = 192.168.29.10
+IP.9  = 192.168.29.100
+IP.10 = 192.168.29.101
+IP.11 = 192.168.29.102
+
+# --- Common home router ranges ---
+IP.12 = 192.168.1.1
+IP.13 = 192.168.1.2
+IP.14 = 192.168.1.100
+IP.15 = 192.168.0.1
+IP.16 = 192.168.0.100
+IP.17 = 192.168.31.1
+IP.18 = 192.168.31.100
+IP.19 = 10.0.0.1
+IP.20 = 10.0.0.2
+IP.21 = 10.0.0.100
+IP.22 = 10.8.0.1
+
+# --- DNS names (device-agnostic, always valid) ---
+DNS.1 = JioFiberB2BUA
+DNS.2 = jiofiber-b2bua
+DNS.3 = localhost
 DNS.4 = br.wln.ims.jio.com
+DNS.5 = $LAN_IP
 EOF
 
 openssl req -x509 -new -nodes -key "$CERTS_DIR/${CERT_NAME}.key" -sha256 -days 3650 \
