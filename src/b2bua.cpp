@@ -178,17 +178,20 @@ static bool generate_self_signed_cert(const std::string &cert_path, const std::s
 
     X509_set_pubkey(x509, pkey);
 
+    std::string lan_ip = get_env_def("IPV4_ADDRESS", "192.168.29.4");
+
     X509_NAME *name = (X509_NAME*)X509_get_subject_name(x509);
     X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, (const unsigned char*)"IN", -1, -1, 0);
     X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, (const unsigned char*)"JioB2BUA", -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (const unsigned char*)"192.168.29.195", -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (const unsigned char*)lan_ip.c_str(), -1, -1, 0);
 
     X509_set_issuer_name(x509, name);
 
     add_x509_ext(x509, NID_basic_constraints, "critical,CA:TRUE");
     add_x509_ext(x509, NID_key_usage, "critical,digitalSignature,keyCertSign,cRLSign,keyEncipherment");
     add_x509_ext(x509, NID_ext_key_usage, "serverAuth,clientAuth");
-    add_x509_ext(x509, NID_subject_alt_name, "IP:192.168.29.195,IP:127.0.0.1,IP:0.0.0.0,DNS:192.168.29.195,DNS:localhost,DNS:JioFiberB2BUA,DNS:br.wln.ims.jio.com");
+    std::string san_str = "IP:" + lan_ip + ",IP:127.0.0.1,DNS:" + lan_ip + ",DNS:localhost,DNS:JioFiberB2BUA,DNS:br.wln.ims.jio.com";
+    add_x509_ext(x509, NID_subject_alt_name, san_str.c_str());
 
     X509_sign(x509, pkey, EVP_sha256());
 
@@ -538,10 +541,10 @@ static bool run_cpp_otp_provisioner() {
     }
 
     std::cout << "\n[b2bua] OTP Verified Successfully!\n";
-    std::cout << "[b2bua] Local TLS Setup:\n";
-    std::cout << "  1) Disable Local TLS (UDP port 5061 only) [Default]\n";
-    std::cout << "  2) Enable Local TLS & generate brand new cert pair\n";
-    std::cout << "  3) Enable Local TLS & keep existing cert.pem from disk\n";
+    std::cout << "[b2bua] Prompt for Local TLS Certificate Setup:\n";
+    std::cout << "  Option 1 [Default]: Generate a brand new TLS certificate pair (cert.pem & key.pem).\n";
+    std::cout << "  Option 2: Keep & use existing cert.pem from disk.\n";
+    std::cout << "  Option 3: Disable Local TLS (UDP port 5061 only mode).\n";
     std::cout << "Select option [1, 2, or 3, default: 1]: ";
     std::cout.flush();
 
@@ -550,20 +553,22 @@ static bool run_cpp_otp_provisioner() {
     std::getline(std::cin, cert_choice);
     cert_choice = trim(cert_choice);
 
-    std::string gen_new_flag = "0";
-    std::string enable_tls_flag = "0";
+    std::string gen_new_flag = "1";
+    std::string enable_tls_flag = "1";
 
     if (cert_choice == "2") {
         enable_tls_flag = "1";
-        gen_new_flag = "1";
-    } else if (cert_choice == "3") {
-        enable_tls_flag = "1";
         gen_new_flag = "0";
-    } else {
+    } else if (cert_choice == "3") {
         enable_tls_flag = "0";
         gen_new_flag = "0";
+    } else {
+        // Option 1 [Default]
+        enable_tls_flag = "1";
+        gen_new_flag = "1";
     }
 
+    std::string default_ip = "192.168.29.4";
     std::ofstream env_out(".env");
     if (!env_out.is_open()) return false;
 
@@ -571,7 +576,7 @@ static bool run_cpp_otp_provisioner() {
     env_out << "HOSTNAME_OVERRIDE=" << hostname << "\n";
     env_out << "UUID=" << uuid << "\n";
     env_out << "USER_AGENT=JSEAndrd-1.0\n";
-    env_out << "IPV4_ADDRESS=192.168.29.195\n";
+    env_out << "IPV4_ADDRESS=" << default_ip << "\n";
     env_out << "LOCAL_PORT=5061\n";
     env_out << "LOCAL_TLS_PORT=5062\n";
     env_out << "ENABLE_LOCAL_TLS=" << enable_tls_flag << "\n";
