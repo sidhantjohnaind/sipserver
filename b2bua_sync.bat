@@ -1,8 +1,10 @@
 @echo off
 :: =====================================================================
-:: b2bua_sync.bat - Bare-Metal Multi-Boot Sync Tool (Windows 11 / 10 / Linux)
-:: Auto-scans all Windows drive letters (C:, D:, E:, F:, etc.) and shared NTFS
-:: partitions to sync .env credentials and certificates across all OSes.
+:: b2bua_sync.bat - Universal Multi-Boot Sync & Backup Tool (Windows)
+:: 
+# Works on ANY setup:
+# 1. Scans C:\Program Files\JioFiberB2BUA and all drive letters (D:, E:, etc.)
+# 2. 1-Click ZIP Archive export/import for USB / Cloud sync
 :: =====================================================================
 setlocal EnableDelayedExpansion
 
@@ -11,7 +13,7 @@ set "SOURCE_DIR=%SCRIPT_DIR%"
 if exist "%SCRIPT_DIR%bin\windows-x64\" set "SOURCE_DIR=%SCRIPT_DIR%bin\windows-x64\"
 
 echo =====================================================================
-echo    JioFiber B2BUA - Bare-Metal Multi-Boot Sync (Win 11 / 10 / Ubuntu)
+echo    JioFiber B2BUA - Universal Multi-Boot Sync Tool (Windows)
 echo =====================================================================
 echo    Current Active Directory: %SOURCE_DIR%
 echo.
@@ -19,22 +21,23 @@ echo.
 :: Detect all potential sipserver locations across all drive letters
 set "TARGET_COUNT=0"
 
-for %%D in (C D E F G H I) do (
+for %%D in (C D E F G H I J K L M N O P Q R S T U V W X Y Z) do (
     if exist "%%D:\" (
-        :: Check common installation folders on drive %%D
         for %%P in (
+            "%%D:\Program Files\JioFiberB2BUA"
+            "%%D:\Program Files (x86)\JioFiberB2BUA"
             "%%D:\Programming\sipserver\bin\windows-x64"
             "%%D:\Programming\sipserver"
             "%%D:\sipserver\bin\windows-x64"
             "%%D:\sipserver"
-            "%%D:\Program Files\JioFiberB2BUA"
-            "%%D:\Program Files (x86)\JioFiberB2BUA"
+            "%%D:\Users\%USERNAME%\sipserver"
+            "%%D:\Users\%USERNAME%\Desktop\JioFiber_TLS_Certs"
         ) do (
             if exist "%%~P" (
                 if /i not "%%~P"=="%SOURCE_DIR:~0,-1%" if /i not "%%~P\"=="%SOURCE_DIR%" (
                     set /a TARGET_COUNT+=1
                     set "TARGET_!TARGET_COUNT!=%%~P"
-                    echo    [!TARGET_COUNT!] Found Target Partition: %%~P
+                    echo    [!TARGET_COUNT!] Found Location: %%~P
                 )
             )
         )
@@ -42,28 +45,30 @@ for %%D in (C D E F G H I) do (
 )
 
 echo.
-if %TARGET_COUNT% equ 0 (
-    echo [i] All files in this folder (%SOURCE_DIR%) are ready for Windows 10/11!
-    echo [i] Running b2bua_msvc.exe from this directory directly uses these credentials.
-    pause
-    exit /b 0
-)
-
 echo Available Sync Operations:
-echo   1. Push Active Config -^> All Multi-Boot Partitions (Update Win 10 / Win 11 / Shared NTFS)
-echo   2. Pull from a Partition -^> Active Directory
-echo   3. Exit
+echo   1. Push Active Config -^> All Detected Multi-Boot Partitions
+echo   2. Pull from a Location -^> Active Directory
+echo   3. Export Portable ZIP Archive (.env + Certs for USB / Backup)
+echo   4. Import from Portable ZIP Archive
+echo   5. Exit
 echo.
-set /p "CHOICE=Select an option [1/2/3]: "
+set /p "CHOICE=Select an option [1/2/3/4/5]: "
 
 if "%CHOICE%"=="1" goto :push_all
 if "%CHOICE%"=="2" goto :pull_select
-if "%CHOICE%"=="3" exit /b
+if "%CHOICE%"=="3" goto :export_zip
+if "%CHOICE%"=="4" goto :import_zip
+if "%CHOICE%"=="5" exit /b
 exit /b
 
 :push_all
+if %TARGET_COUNT% equ 0 (
+    echo [i] No other partitions found. Use Option 3 to Export a ZIP archive instead!
+    pause
+    exit /b 0
+)
 echo.
-echo [*] Pushing configuration to all %TARGET_COUNT% partitions...
+echo [*] Pushing configuration to all %TARGET_COUNT% locations...
 for /l %%i in (1,1,%TARGET_COUNT%) do (
     set "DEST=!TARGET_%%i!"
     echo    -^> Syncing to: !DEST!
@@ -73,11 +78,16 @@ for /l %%i in (1,1,%TARGET_COUNT%) do (
     if exist "%SOURCE_DIR%key.*" copy /y "%SOURCE_DIR%key.*" "!DEST!\" >nul 2>nul
 )
 echo.
-echo [SUCCESS] Multi-boot synchronization complete across all OS drives!
+echo [SUCCESS] Synchronization complete!
 pause
 exit /b
 
 :pull_select
+if %TARGET_COUNT% equ 0 (
+    echo [i] No other partitions found. Use Option 4 to Import from a ZIP archive!
+    pause
+    exit /b 0
+)
 echo.
 echo Select which partition to copy FROM:
 for /l %%i in (1,1,%TARGET_COUNT%) do (
@@ -100,5 +110,31 @@ if exist "%PULL_SRC%\JioFiberB2BUA.*" copy /y "%PULL_SRC%\JioFiberB2BUA.*" "%SOU
 if exist "%PULL_SRC%\cert.*" copy /y "%PULL_SRC%\cert.*" "%SOURCE_DIR%" >nul 2>nul
 if exist "%PULL_SRC%\key.*" copy /y "%PULL_SRC%\key.*" "%SOURCE_DIR%" >nul 2>nul
 echo [SUCCESS] Configuration pulled into active directory!
+pause
+exit /b
+
+:export_zip
+echo.
+set "ZIP_OUT=%USERPROFILE%\Desktop\JioFiber_Config_Backup.zip"
+echo [*] Creating portable backup archive: %ZIP_OUT%
+powershell -Command "$files = Get-ChildItem -Path '%SOURCE_DIR%' -Include '.env','JioFiberB2BUA.*','cert.*','key.*' -Recurse | Where-Object { -not $_.PSIsContainer }; Compress-Archive -Path $files.FullName -DestinationPath '%ZIP_OUT%' -Force"
+echo.
+echo [SUCCESS] Exported backup ZIP to Desktop: %ZIP_OUT%
+echo You can copy this ZIP to a USB drive or other computer.
+pause
+exit /b
+
+:import_zip
+echo.
+set /p "ZIP_IN=Enter full path to ZIP file: "
+if not exist "%ZIP_IN%" (
+    echo [ERROR] File not found: %ZIP_IN%
+    pause
+    exit /b 1
+)
+echo [*] Extracting %ZIP_IN% -^> %SOURCE_DIR%
+powershell -Command "Expand-Archive -Path '%ZIP_IN%' -DestinationPath '%SOURCE_DIR%' -Force"
+echo.
+echo [SUCCESS] Configuration imported successfully!
 pause
 exit /b

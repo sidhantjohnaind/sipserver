@@ -1,21 +1,17 @@
 #!/bin/bash
 # =====================================================================
-# b2bua_sync.sh - Universal Bidirectional Dual-Boot / Multi-OS Sync
-# Auto-detects Linux home, WSL, and all mounted Windows / NTFS partitions.
-#
-# Usage:
-#   bash b2bua_sync.sh            -> interactive menu
-#   bash b2bua_sync.sh push       -> Linux -> Windows / NTFS partitions
-#   bash b2bua_sync.sh pull       -> Windows / NTFS -> Linux
-#   bash b2bua_sync.sh auto       -> auto-detect newer timestamp & sync
-#   bash b2bua_sync.sh diff       -> inspect differences between OSes
+# b2bua_sync.sh - Universal Multi-Boot Sync & Backup Tool (Linux)
+# 
+# Works on ANY setup:
+# 1. Direct NTFS/Windows auto-mount discovery across all drives & users
+# 2. Universal 1-Click ZIP Archive export/import for USB / Cloud sync
 # =====================================================================
+
+set -e
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-# ---- Dynamic Path Discovery -----------------------------------------
-
-# 1. Linux / WSL Home Directory
+# ---- 1. Linux Local Install Path Discovery --------------------------
 LINUX_DIR=""
 for candidate in \
     "$HOME/sipserver" \
@@ -28,36 +24,39 @@ for candidate in \
 done
 [ -z "$LINUX_DIR" ] && LINUX_DIR="$HOME/sipserver"
 
-# 2. Windows / NTFS Shared Partition Discovery
-# Automatically scans /mnt/*, /media/*, and /run/media/* for sipserver windows binaries/data
+# ---- 2. Windows Partition Auto-Discovery ----------------------------
+# Scans all mounted Windows drives (/mnt/*, /media/*, /run/media/*)
 WIN_DIRS=()
 
-# Local repo windows binary folder (if on NTFS)
 if [ -d "$SCRIPT_DIR/bin/windows-x64" ]; then
     WIN_DIRS+=("$SCRIPT_DIR/bin/windows-x64")
 fi
 
-# Search mounted drives
 for mount_root in /mnt/* /media/*/* /run/media/*/*; do
     [ -d "$mount_root" ] || continue
-    # Skip standard Linux mounts like /mnt/wsl
     [[ "$mount_root" =~ /mnt/wsl ]] && continue
 
-    # Check for sipserver folders on mounted drive
-    for sub in "Programming/sipserver/bin/windows-x64" "sipserver/bin/windows-x64" "sipserver" "Program Files/JioFiber SIP Server"; do
-        target="$mount_root/$sub"
-        if [ -d "$target" ]; then
-            # Avoid duplicates
-            already_added=0
-            for existing in "${WIN_DIRS[@]}"; do
-                [ "$existing" = "$target" ] && already_added=1 && break
-            done
-            [ $already_added -eq 0 ] && WIN_DIRS+=("$target")
-        fi
+    for sub in \
+        "Program Files/JioFiberB2BUA" \
+        "Program Files (x86)/JioFiberB2BUA" \
+        "Programming/sipserver/bin/windows-x64" \
+        "sipserver/bin/windows-x64" \
+        "sipserver" \
+        "Users"/*"/sipserver" \
+        "Users"/*"/Desktop/JioFiber_TLS_Certs"; do
+        
+        for target in "$mount_root"/$sub; do
+            if [ -d "$target" ]; then
+                already_added=0
+                for existing in "${WIN_DIRS[@]}"; do
+                    [ "$existing" = "$target" ] && already_added=1 && break
+                done
+                [ $already_added -eq 0 ] && WIN_DIRS+=("$target")
+            fi
+        done
     done
 done
 
-# Primary Windows Target
 NTFS_DIR="${WIN_DIRS[0]:-$SCRIPT_DIR/bin/windows-x64}"
 
 # Files to sync
@@ -82,7 +81,7 @@ BLU='\033[1;34m'; CYN='\033[0;36m'; RST='\033[0m'
 banner() {
     echo -e "${BLU}"
     echo "  ╔══════════════════════════════════════════════════════════╗"
-    echo "  ║   JioFiber B2BUA — Universal Multi-Boot OS Sync Tool     ║"
+    echo "  ║   JioFiber B2BUA — Universal Multi-Boot Sync Tool        ║"
     echo "  ╚══════════════════════════════════════════════════════════╝"
     echo -e "${RST}"
 }
@@ -138,17 +137,26 @@ do_copy() {
 
 push_to_windows() {
     echo -e "${YEL}► Pushing: Linux → All Detected Windows/NTFS Partitions${RST}"
+    if [ ${#WIN_DIRS[@]} -eq 0 ]; then
+        echo -e "${RED}[ERROR]${RST} No mounted Windows partitions found."
+        echo "        Use Option 5 to export a Portable ZIP Archive instead!"
+        return
+    fi
     for win_dest in "${WIN_DIRS[@]}"; do
-        do_copy "$LINUX_DIR" "$win_dest" "Linux -> Windows Target ($win_dest)"
+        do_copy "$LINUX_DIR" "$win_dest" "Linux -> Windows ($win_dest)"
     done
-    echo -e "  ${BLU}[i]${RST} Configuration is now updated for Windows boot."
+    echo -e "  ${BLU}[i]${RST} Configuration is updated for Windows boot."
 }
 
 pull_from_windows() {
     echo -e "${YEL}◄ Pulling: Windows/NTFS → Linux${RST}"
-    do_copy "$NTFS_DIR" "$LINUX_DIR" "Windows Target ($NTFS_DIR) -> Linux"
+    if [ ${#WIN_DIRS[@]} -eq 0 ]; then
+        echo -e "${RED}[ERROR]${RST} No mounted Windows partitions found."
+        echo "        Use Option 6 to import from a Portable ZIP Archive instead!"
+        return
+    fi
+    do_copy "$NTFS_DIR" "$LINUX_DIR" "Windows ($NTFS_DIR) -> Linux"
     
-    # Restart service if active
     if command -v systemctl &>/dev/null && systemctl is-active jiofiber-b2bua &>/dev/null; then
         echo -e "  ${CYN}[↺]${RST} Restarting Linux service..."
         sudo systemctl restart jiofiber-b2bua && echo -e "  ${GRN}[✓]${RST} Linux service restarted." || true
@@ -156,7 +164,7 @@ pull_from_windows() {
 }
 
 auto_sync() {
-    echo -e "${YEL}⚡ Auto-detecting newest configuration between OSes...${RST}"
+    echo -e "${YEL}⚡ Auto-detecting newest configuration...${RST}"
     linux_ts=$(get_newest_timestamp "$LINUX_DIR")
     ntfs_ts=$(get_newest_timestamp "$NTFS_DIR")
 
@@ -173,51 +181,75 @@ auto_sync() {
     fi
 }
 
-show_diff() {
-    echo -e "${YEL}=== Configuration Difference Check ===${RST}"
-    for f in "${SYNC_FILES[@]}"; do
-        lf="$LINUX_DIR/$f"; [ ! -f "$lf" ] && lf="$LINUX_DIR/certs/$f"
-        wf="$NTFS_DIR/$f";  [ ! -f "$wf" ] && wf="$NTFS_DIR/certs/$f"
-        [ -L "$lf" ] && lf="$(readlink -f "$lf")"
-        [ -L "$wf" ] && wf="$(readlink -f "$wf")"
+export_zip() {
+    echo -e "${YEL}📦 Exporting Portable Config ZIP Archive...${RST}"
+    local OUT_ZIP="$HOME/Desktop/JioFiber_Config_Backup.zip"
+    [ -d "$HOME/Desktop" ] || OUT_ZIP="$SCRIPT_DIR/JioFiber_Config_Backup.zip"
+    
+    local TEMP_DIR="/tmp/jiofiber_zip_export"
+    rm -rf "$TEMP_DIR" && mkdir -p "$TEMP_DIR"
 
-        if [ -f "$lf" ] && [ -f "$wf" ]; then
-            if ! diff -q "$lf" "$wf" &>/dev/null; then
-                echo -e "\n${RED}DIFFER:${RST} $f"
-                diff -u "$lf" "$wf" | head -15 || true
-            else
-                echo -e "  ${GRN}IDENTICAL:${RST} $f"
-            fi
-        elif [ -f "$lf" ]; then
-            echo -e "  ${YEL}LINUX ONLY:${RST} $f"
-        elif [ -f "$wf" ]; then
-            echo -e "  ${YEL}WINDOWS ONLY:${RST} $f"
+    for f in "${SYNC_FILES[@]}"; do
+        src_file="$LINUX_DIR/$f"
+        [ ! -f "$src_file" ] && src_file="$LINUX_DIR/certs/$f"
+        if [ -f "$src_file" ]; then
+            [ -L "$src_file" ] && src_file="$(readlink -f "$src_file")"
+            cp "$src_file" "$TEMP_DIR/" 2>/dev/null || true
         fi
     done
-    echo ""
+
+    (cd "$TEMP_DIR" && zip -q -r "$OUT_ZIP" ./*)
+    rm -rf "$TEMP_DIR"
+
+    echo -e "  ${GRN}[SUCCESS]${RST} Exported backup archive to:"
+    echo -e "  ${CYN}$OUT_ZIP${RST}"
+    echo "  You can copy this ZIP to any USB drive, Windows partition, or cloud storage!"
+}
+
+import_zip() {
+    echo -e "${YEL}📥 Import from Portable Config ZIP Archive...${RST}"
+    read -rp "  Enter full path to ZIP file: " ZIP_PATH
+    if [ ! -f "$ZIP_PATH" ]; then
+        echo -e "${RED}[ERROR]${RST} File not found: $ZIP_PATH"
+        return
+    fi
+    local TEMP_DIR="/tmp/jiofiber_zip_import"
+    rm -rf "$TEMP_DIR" && mkdir -p "$TEMP_DIR"
+    unzip -q -o "$ZIP_PATH" -d "$TEMP_DIR"
+
+    do_copy "$TEMP_DIR" "$LINUX_DIR" "Imported ZIP Archive -> Linux"
+    rm -rf "$TEMP_DIR"
+
+    if command -v systemctl &>/dev/null && systemctl is-active jiofiber-b2bua &>/dev/null; then
+        sudo systemctl restart jiofiber-b2bua && echo -e "  ${GRN}[✓]${RST} Service restarted." || true
+    fi
 }
 
 show_menu() {
     banner
     echo "  Linux Source  : $LINUX_DIR"
-    echo "  Windows Target: $NTFS_DIR"
-    if [ ${#WIN_DIRS[@]} -gt 1 ]; then
-        echo "  Additional Windows Partitions Found: $((${#WIN_DIRS[@]} - 1))"
+    if [ ${#WIN_DIRS[@]} -gt 0 ]; then
+        echo "  Windows Target: $NTFS_DIR"
+        [ ${#WIN_DIRS[@]} -gt 1 ] && echo "  Total Windows Locations Found: ${#WIN_DIRS[@]}"
+    else
+        echo "  Windows Target: [No mounted Windows partition detected]"
     fi
     echo ""
-    echo -e "  ${BLU}1)${RST}  Push Linux ➔ Windows     (sync credentials/certs to Windows)"
-    echo -e "  ${BLU}2)${RST}  Pull Windows ➔ Linux     (update Linux with changes made on Windows)"
-    echo -e "  ${BLU}3)${RST}  Auto Sync (Newest Wins)   (automatic bidirectional resolution)"
-    echo -e "  ${BLU}4)${RST}  Show File Differences     (compare .env and certificates)"
+    echo -e "  ${BLU}1)${RST}  Push Linux ➔ Windows Partitions   (direct disk-to-disk sync)"
+    echo -e "  ${BLU}2)${RST}  Pull Windows ➔ Linux              (read from mounted Windows partition)"
+    echo -e "  ${BLU}3)${RST}  Auto Sync (Newest Wins)          (auto-resolve newest files)"
+    echo -e "  ${BLU}4)${RST}  Export to Portable ZIP Archive   (save .env + certs for USB / other PCs)"
+    echo -e "  ${BLU}5)${RST}  Import from Portable ZIP Archive (load .env + certs from ZIP file)"
     echo -e "  ${BLU}q)${RST}  Quit"
     echo ""
-    read -rp "  Choose option [1/2/3/4/q]: " choice
+    read -rp "  Choose option [1/2/3/4/5/q]: " choice
 
     case "$choice" in
         1) push_to_windows ;;
         2) pull_from_windows ;;
         3) auto_sync ;;
-        4) show_diff ;;
+        4) export_zip ;;
+        5) import_zip ;;
         q|Q) echo "Exiting."; exit 0 ;;
         *) echo "Invalid option."; show_menu ;;
     esac
@@ -227,6 +259,7 @@ case "${1:-menu}" in
     push)   banner; push_to_windows ;;
     pull)   banner; pull_from_windows ;;
     auto)   banner; auto_sync ;;
-    diff)   banner; show_diff ;;
+    export) banner; export_zip ;;
+    import) banner; import_zip ;;
     menu|*) show_menu ;;
 esac
