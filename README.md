@@ -72,52 +72,65 @@ The provisioner is **built directly into the binary (100% pure C++)**. Simply la
 - When launched for the first time, it prompts for your Jio router IP (usually `192.168.29.1`).
 - Enter the OTP sent to your registered Jio mobile number.
 - Prompt for Local TLS Certificate Setup:
-  - **Option 1**: Generate a brand new TLS certificate pair (`cert.pem` & `key.pem`).
-  - **Option 2**: Keep & use existing `cert.pem` from disk.
-  - **Option 3 [Default]**: Disable Local TLS (UDP port 5061 only mode).
+  - **Option 1**: Generate a brand new TLS certificate pair (`JioFiberB2BUA.pem` & `JioFiberB2BUA.key`).
+  - **Option 2**: Keep & use existing certificates from disk.
+  - **Option 3 [Default]**: Disable Local TLS (pure UDP port 5061 only mode).
 - It automatically whitelists your device, fetches your SIP credentials, and saves `.env`.
 
 ---
 
-### How to Generate & Install TLS Certificates for Softphones (Linphone / Zoiper)
+### Dual Transport & Certificate Setup for Softphones (Linphone / Zoiper) & Local HTTPS Web Servers
 
-When Local TLS is enabled on port `5062`, `b2bua` provides high-compatibility X.509 v3 certificates with Subject Alternative Names (SAN) matching your local LAN host IP (e.g. `192.168.29.x`):
+The generated certificates have full **X.509 v3 `CA:TRUE`** capabilities with broad **`/24` Subject Alternative Name (SAN)** coverage for all common home router subnets (`192.168.29.1–254`, `192.168.0–3.x`, `192.168.31.x`, `10.0.0.x`). A single certificate works across any device IP without ever needing regeneration!
 
 #### 🛠️ 1-Click Native Certificate Generator (Zero Python):
 * **Linux**: Run `./generate_certs.sh` (or `./generate_certs.sh 192.168.29.x`)
 * **Windows**: Double-click `generate_certs.bat`
-* **Open Folder**: Run `./open_tls_cert.sh` on Linux or double-click `open_tls_cert.bat` on Windows to open the `certs/` directory directly.
 
 #### 📂 Generated Certificate Files (inside `certs/` & Desktop):
-1. **`cert.pem` / `cert.crt`**: Standard X.509 v3 public certificate with LAN IP SANs & `CA:TRUE`.
-2. **`cert.p12` / `cert.pfx`**: Android/iOS Universal PKCS#12 bundle (Password: **`1234`**).
-3. **`key.pem`**: 2048-bit server private key.
+1. **`JioFiberB2BUA.pem` / `JioFiberB2BUA.crt`**: Standard X.509 v3 public certificate with full `/24` LAN IP SANs & `CA:TRUE`.
+2. **`JioFiberB2BUA.p12` / `JioFiberB2BUA.pfx`**: Universal PKCS#12 bundle for Android/iOS with friendly name *"JioFiber B2BUA"* (Password: **`1234`**).
+3. **`JioFiberB2BUA.key`**: 2048-bit server private key.
+4. *(Legacy aliases `cert.pem`, `key.pem`, `cert.crt`, `cert.p12` are automatically maintained for backwards compatibility).*
 
-#### 📱 How to Transfer & Install on Phone / Softphones:
-
-* **Transfer Method (Optional Python Local Web Server)**:
+#### 🛡️ 1-Click Generic CA Trust Installers (Linux & Windows):
+* **🐧 Linux (Debian, Ubuntu, Fedora, Arch, openSUSE, Alpine + Chrome/Firefox NSS)**:
   ```bash
-  python -m http.server 8000
+  sudo bash install_ca_cert.sh
   ```
-  Open phone browser to `http://<your-pc-ip>:8000/certs/cert.pem` (or use USB cable, AirDrop, Google Drive, Email).
+* **🪟 Windows**:
+  Double-click **`install_ca_cert.bat`** (auto-requests Administrator privileges and adds the certificate to Windows *Trusted Root Certification Authorities*).
 
+#### 🌐 Using for Local HTTPS Web Servers:
+Because the certificate is a full Root CA with broad IP SANs and `serverAuth` key usage, you can use it in **Nginx / Caddy / Node.js / Apache** to serve local HTTPS dashboards with a **🔒 Green padlock / zero warnings** on all trusted devices.
+
+#### 📱 How to Transfer & Install on Softphones:
 * **Inside Linphone App (Easiest — 0 OS install needed)**:
-  1. Transfer `cert.pem` to your phone.
-  2. In **Linphone** -> **Settings ⚙️** -> **Network** -> **Root CA Certificate** -> Select `cert.pem`.
+  1. Transfer `JioFiberB2BUA.pem` (or `cert.pem`) to your phone.
+  2. In **Linphone** -> **Settings ⚙️** -> **Network** -> **Root CA Certificate** -> Select `JioFiberB2BUA.pem`.
   3. Set Transport to **TLS** (Port `5062`).
-
 * **Android System KeyStore ("VPN & App User Certificate")**:
-  1. Transfer `cert.p12` to your phone.
-  2. Tap `cert.p12` -> Enter password: **`1234`** -> Tap **OK**. (Uses 3DES compatibility encryption).
-
+  1. Transfer `JioFiberB2BUA.p12` to phone -> Tap file -> Password: **`1234`** -> Tap **OK**.
 * **🍏 iOS / iPhone**:
-  1. Download `cert.pem` into the **Files app** on your iPhone.
-  2. Open iPhone **Settings** -> Tap **Profile Downloaded** -> Tap **Install**.
-  3. Go to **Settings** -> **General** -> **About** -> **Certificate Trust Settings** -> Enable **Full Trust** for `JioFiberB2BUA`.
+  1. AirDrop/Download `JioFiberB2BUA.pem` -> Settings -> **Profile Downloaded** -> Install.
+  2. Settings -> **General** -> **About** -> **Certificate Trust Settings** -> Enable **Full Trust** for `JioFiberB2BUA`.
 
-* **💻 Windows / Desktop**:
-  * **MicroSIP**: In Settings -> Network -> Check **TLS** and select `cert.pem` as CA file.
-  * **Linphone Desktop**: Preferences -> Network -> Advanced -> Select `cert.pem` as Root CA.
+---
+
+### 🔄 Multi-Boot & Dual-Boot Bidirectional Sync Tools
+
+If you dual-boot between **Linux and Windows** on the same machine, use the bidirectional sync utilities to share your `.env` credentials and certificates seamlessly without re-authenticating:
+
+* **🐧 From Linux**:
+  ```bash
+  ./b2bua_sync.sh        # Interactive menu
+  ./b2bua_sync.sh auto   # Auto-detects newer timestamp & synchronizes
+  ./b2bua_sync.sh push   # Pushes Linux configuration to NTFS/Windows partitions
+  ./b2bua_sync.sh pull   # Pulls Windows configuration into Linux & restarts service
+  ./b2bua_sync.sh diff   # Compares config files across both OSes
+  ```
+* **🪟 From Windows**:
+  Double-click **`b2bua_sync.bat`** to synchronize `.env` and certificates directly between Windows and any installed WSL/Linux distribution.
 
 ---
 
