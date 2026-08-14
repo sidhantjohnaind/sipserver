@@ -827,9 +827,9 @@ static pj_status_t on_tx_msg_fix_contact(pjsip_tx_data *tdata) {
                 }
             }
             if (modified || true /* always rebuild to pick up origin change */) {
-                char sdp_buf[2048];
+                char sdp_buf[8192];
                 int sdp_len = pjmedia_sdp_print(sdp_sess, sdp_buf, sizeof(sdp_buf));
-                if (sdp_len > 0) {
+                if (sdp_len > 0 && (size_t)sdp_len < sizeof(sdp_buf)) {
                     char *new_data = (char*)pj_pool_alloc(tdata->pool, sdp_len + 1);
                     if (new_data) {
                         pj_memcpy(new_data, sdp_buf, sdp_len);
@@ -987,7 +987,7 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e) {
     if (call_id < 0 || call_id >= MAX_CALLS) return;
 
     pjsua_call_get_info(call_id, &ci);
-    PJ_LOG(3, (THIS_FILE, "Call %d state = %s", call_id, ci.state_text.ptr));
+    PJ_LOG(3, (THIS_FILE, "Call %d state = %.*s", call_id, (int)ci.state_text.slen, ci.state_text.ptr));
 
     if (ci.state == PJSIP_INV_STATE_DISCONNECTED) {
         PJ_LOG(3, (THIS_FILE, "Call %d disconnected (reason=%d %.*s)",
@@ -1002,7 +1002,7 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e) {
             pjsua_call_info peer_ci;
             if (pjsua_call_get_info(peer, &peer_ci) == PJ_SUCCESS &&
                 peer_ci.state < PJSIP_INV_STATE_DISCONNECTED) {
-                PJ_LOG(3, (THIS_FILE, "Hanging up peer call %d (peer_state=%s)", peer, peer_ci.state_text.ptr));
+                PJ_LOG(3, (THIS_FILE, "Hanging up peer call %d (peer_state=%.*s)", peer, (int)peer_ci.state_text.slen, peer_ci.state_text.ptr));
                 pjsua_call_hangup(peer, 0, NULL, NULL);
             }
         }
