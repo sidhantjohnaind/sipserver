@@ -49,18 +49,18 @@ Compared to earlier Python/Asterisk/Docker implementations (such as `jiofiber-si
 
 ### 1. Download a pre-built binary / 1-Click Installer
 
-Go to [Releases](https://github.com/sidhantjohnaind/sipserver/releases/tag/v1.0.0) and download the 1-click installer or standalone binary for your target platform:
+Go to [Releases](https://github.com/sidhantjohnaind/sipserver/releases/tag/v1.1.0) and download the 1-click installer or standalone binary for your target platform:
 
 | Platform | Download Link | Package Name | Type / Notes |
 |---|---|---|---|
-| **Windows x64 64-bit (1-Click Installer)** | [🚀 **Download 64-bit Setup (`JioFiber_B2BUA_Setup_x64.exe`)**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/JioFiber_B2BUA_Setup_x64.exe) | `JioFiber_B2BUA_Setup_x64.exe` (228 KB) | ⚡ **1-Click 64-bit Windows Installer** (Auto-configures Firewall, Service & Shortcuts) |
-| **Windows x86 32-bit (1-Click Installer)** | [🚀 **Download 32-bit Setup (`JioFiber_B2BUA_Setup_x86.exe`)**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/JioFiber_B2BUA_Setup_x86.exe) | `JioFiber_B2BUA_Setup_x86.exe` (188 KB) | ⚡ **1-Click 32-bit Windows Installer** (Compatible with legacy 32-bit Windows systems) |
-| **Windows Portable** | [📥 Download `b2bua_msvc.exe`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/b2bua_msvc.exe) | `b2bua_msvc.exe` (1.7 MB) | ✅ Zero-dependency standalone MSVC binary |
-| **Linux 1-Click Script (x86_64 / ARM64)** | [🐧 **Download `install_linux.sh`**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/install_linux.sh) | `install_linux.sh` (2.5 KB) | ⚡ **1-Click Linux Installer** (Auto-detects Arch, Firewall, Service) |
-| **Linux x86_64 (AppImage)** | [🐧 **Download `JioFiber_B2BUA-x86_64.AppImage`**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/JioFiber_B2BUA-x86_64.AppImage) | `JioFiber_B2BUA-x86_64.AppImage` (835 KB) | ⚡ **1-Click Portable Linux AppImage** |
-| **Linux x86_64 Standalone** | [📥 Download `b2bua-linux-amd64`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/b2bua-linux-amd64) | `b2bua-linux-amd64` (1.9 MB) | ✅ Pre-built Linux binary |
-| **Linux ARM64** | [📥 Download `b2bua-linux-arm64`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/b2bua-linux-arm64) | `b2bua-linux-arm64` (1.8 MB) | ✅ Pre-built for Raspberry Pi / Routers |
-| **Linux RISC-V 64** | `b2bua` (linux-riscv64) | `b2bua` | 🔧 Build from source via `python src/build_riscv64.py` |
+| **Windows x64 64-bit (1-Click Installer)** | [🚀 **Download 64-bit Setup (`JioFiber_B2BUA_Setup_x64.exe`)**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.1.0/JioFiber_B2BUA_Setup_x64.exe) | `JioFiber_B2BUA_Setup_x64.exe` (2.3 MB) | ⚡ **1-Click 64-bit Windows Installer** (Auto-configures Firewall, Service & Shortcuts) |
+| **Windows x86 32-bit (1-Click Installer)** | [🚀 **Download 32-bit Setup (`JioFiber_B2BUA_Setup_x86.exe`)**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.1.0/JioFiber_B2BUA_Setup_x86.exe) | `JioFiber_B2BUA_Setup_x86.exe` (2.1 MB) | ⚡ **1-Click 32-bit Windows Installer** (Compatible with legacy 32-bit Windows systems) |
+| **Windows Portable** | [📥 Download `b2bua_msvc.exe`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.1.0/b2bua_msvc.exe) | `b2bua_msvc.exe` (6.2 MB) | ✅ Zero-dependency standalone binary (Dual SCM + Console) |
+| **Linux 1-Click Script (x86_64 / ARM64)** | [🐧 **Download `install_linux.sh`**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.1.0/install_linux.sh) | `install_linux.sh` (2.5 KB) | ⚡ **1-Click Linux Installer** (Auto-detects Arch, Firewall, Service) |
+| **Linux x86_64 (AppImage)** | [🐧 **Download `JioFiber_B2BUA-x86_64.AppImage`**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.1.0/JioFiber_B2BUA-x86_64.AppImage) | `JioFiber_B2BUA-x86_64.AppImage` (816 KB) | ⚡ **1-Click Portable Linux AppImage** |
+| **Linux x86_64 Standalone** | [📥 Download `b2bua-linux-amd64`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.1.0/b2bua) | `b2bua` (1.9 MB) | ✅ Pre-built Linux AMD64 binary |
+| **Linux ARM64 Standalone** | [📥 Download `b2bua-linux-arm64`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.1.0/b2bua-linux-arm64) | `b2bua-linux-arm64` (1.9 MB) | ✅ Pre-built for Raspberry Pi / ARM64 Routers |
+| **Linux RISC-V 64 Standalone** | [📥 Download `b2bua-linux-riscv64`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.1.0/b2bua-linux-riscv64) | `b2bua-linux-riscv64` (1.6 MB) | ✅ Pre-built for RISC-V 64 SBCs / Routers |
 
 > **Windows on ARM (Snapdragon X Elite / Surface Pro ARM / Windows 11 ARM64)**:
 > Windows 11 ARM64 includes Microsoft's **Prism x64 emulation engine** — the standard `b2bua_msvc.exe` (x64) runs on all Windows ARM devices with near-native speed and **zero configuration needed**. A native ARM64 build script ([`src/build_win_arm64.py`](src/build_win_arm64.py)) is also provided if you have the MSVC ARM64 cross-compile toolchain installed.

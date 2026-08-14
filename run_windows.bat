@@ -16,7 +16,7 @@ if not exist "%EXE_PATH%" set EXE_PATH=%~dp0b2bua_msvc.exe
 
 if not exist "%EXE_PATH%" (
     echo [*] Downloading latest release binary from GitHub...
-    powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/b2bua_msvc.exe' -OutFile '%~dp0b2bua_msvc.exe'"
+    powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://github.com/sidhantjohnaind/sipserver/releases/download/v1.1.0/b2bua_msvc.exe' -OutFile '%~dp0b2bua_msvc.exe'"
     set EXE_PATH=%~dp0b2bua_msvc.exe
 )
 

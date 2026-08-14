@@ -75,7 +75,7 @@ int main() {
         CopyFileA(src_exe.c_str(), dst_exe.c_str(), FALSE);
     } else {
         std::cout << "[*] Downloading latest b2bua_msvc.exe from GitHub...\n";
-        std::string dl_cmd = "powershell -Command \"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/b2bua_msvc.exe' -OutFile '" + dst_exe + "'\"";
+        std::string dl_cmd = "powershell -Command \"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://github.com/sidhantjohnaind/sipserver/releases/download/v1.1.0/b2bua_msvc.exe' -OutFile '" + dst_exe + "'\"";
         run_cmd(dl_cmd);
     }
 
