@@ -87,7 +87,7 @@ HTML_PAGE = """<!DOCTYPE html>
         <div class="card">
             <h2>📱 Android KeyStore <span class="badge">PKCS#12</span></h2>
             <p style="font-size: 13px; color: #94a3b8;">For Android system-wide trust (Chrome, Apps, SIP clients).</p>
-            <a href="/JioFiberB2BUA.p12" class="btn btn-android">⬇️ Download JioFiberB2BUA.p12</a>
+            <a href="/LocalLAN_RootCA.p12" class="btn btn-android">⬇️ Download LocalLAN_RootCA.p12</a>
             <ol class="steps">
                 <li>Tap <b>Download</b> above.</li>
                 <li>When prompted for password, enter: <b><code>1234</code></b></li>
@@ -99,11 +99,11 @@ HTML_PAGE = """<!DOCTYPE html>
         <div class="card">
             <h2>🍏 iOS / iPhone <span class="badge">Profile</span></h2>
             <p style="font-size: 13px; color: #94a3b8;">For iPhones and iPads (Safari & iOS SIP clients).</p>
-            <a href="/JioFiberB2BUA.pem" class="btn btn-ios">⬇️ Download JioFiberB2BUA.pem</a>
+            <a href="/LocalLAN_RootCA.pem" class="btn btn-ios">⬇️ Download LocalLAN_RootCA.pem</a>
             <ol class="steps">
                 <li>Tap <b>Download</b> above ➔ Allow profile download.</li>
                 <li>Go to <b>Settings ⚙️</b> ➔ Tap <b>Profile Downloaded</b> ➔ Install.</li>
-                <li>Go to <b>Settings</b> ➔ <b>General</b> ➔ <b>About</b> ➔ <b>Certificate Trust Settings</b> ➔ Enable <b>Full Trust</b> for JioFiberB2BUA.</li>
+                <li>Go to <b>Settings</b> ➔ <b>General</b> ➔ <b>About</b> ➔ <b>Certificate Trust Settings</b> ➔ Enable <b>Full Trust</b> for LocalLAN_RootCA.</li>
             </ol>
         </div>
 
@@ -111,7 +111,7 @@ HTML_PAGE = """<!DOCTYPE html>
         <div class="card">
             <h2>📞 Linphone Softphone <span class="badge">Direct Root CA</span></h2>
             <p style="font-size: 13px; color: #94a3b8;">Directly import into Linphone (no OS trust required).</p>
-            <a href="/JioFiberB2BUA.crt" class="btn btn-linphone">⬇️ Download JioFiberB2BUA.crt</a>
+            <a href="/LocalLAN_RootCA.crt" class="btn btn-linphone">⬇️ Download LocalLAN_RootCA.crt</a>
             <ol class="steps">
                 <li>Download the certificate to your phone.</li>
                 <li>In <b>Linphone</b> ➔ <b>Settings ⚙️</b> ➔ <b>Network</b> ➔ <b>Root CA Certificate</b> ➔ Select downloaded file.</li>

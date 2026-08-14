@@ -25,10 +25,10 @@ systemctl daemon-reload
 
 # 2. Remove CA Certificate from Trust Stores
 echo "[2/4] Removing CA certificate from system trust store..."
-rm -f /usr/local/share/ca-certificates/JioFiberB2BUA.crt \
-      /etc/pki/ca-trust/source/anchors/JioFiberB2BUA.crt \
-      /etc/ca-certificates/trust-source/anchors/JioFiberB2BUA.crt \
-      /etc/ssl/certs/JioFiberB2BUA.pem 2>/dev/null || true
+rm -f /usr/local/share/ca-certificates/LocalLAN_RootCA.crt \
+      /etc/pki/ca-trust/source/anchors/LocalLAN_RootCA.crt \
+      /etc/ca-certificates/trust-source/anchors/LocalLAN_RootCA.crt \
+      /etc/ssl/certs/LocalLAN_RootCA.pem 2>/dev/null || true
 
 if command -v update-ca-certificates &>/dev/null; then
     update-ca-certificates --fresh >/dev/null 2>&1 || update-ca-certificates >/dev/null 2>&1
