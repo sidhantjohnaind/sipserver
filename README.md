@@ -141,7 +141,10 @@ By default, `b2bua` operates in pure **UDP mode (Port 5061)** (`ENABLE_LOCAL_TLS
 3. **Configure Softphone for TLS (Port 5062)**:
    * **Linphone (Mobile / Desktop)**: Set Server to `<your-pc-ip>:5062`, Transport to **TLS**, and select `JioFiberB2BUA.pem` as the Root CA Certificate.
    * **MicroSIP (Windows)**: In Settings ➔ Network ➔ Check **TLS**, set Server to `<your-pc-ip>:5062`, and select `JioFiberB2BUA.pem` as the CA certificate.
-   * **Windows Trust (Optional)**: Double-click `install_ca_cert.bat` to trust the certificate system-wide for all Windows apps and browsers.
+#### 🔐 Security & Privacy (Per-Device Isolated Encryption):
+* **No Shared Session Keys**: Sharing the Root CA certificate only shares **identity/trust**. 
+* Every individual connection (e.g. Phone A vs Laptop B) negotiates a **unique, independent symmetric session key (`AES-256-GCM` via ECDHE)**.
+* **Perfect Forward Secrecy (PFS)**: One device cannot eavesdrop on another device's calls or data streams. Session keys exist only in volatile RAM for the duration of the connection.
 
 ---
 
