@@ -117,20 +117,22 @@ Because the certificate is a full Root CA with broad IP SANs and `serverAuth` ke
 
 ---
 
-### 🔄 Multi-Boot & Dual-Boot Bidirectional Sync Tools
+### 🔄 Universal Multi-Boot & Dual-Boot Bidirectional Sync Tools
 
-If you dual-boot between **Linux and Windows** on the same machine, use the bidirectional sync utilities to share your `.env` credentials and certificates seamlessly without re-authenticating:
+If you multi-boot (**Windows 11 / Windows 10 / Ubuntu / Debian / Arch**) on the same machine, or need to transfer credentials to another PC, use the universal sync utilities:
 
-* **🐧 From Linux**:
+* **🐧 From Linux (`./b2bua_sync.sh`)**:
   ```bash
   ./b2bua_sync.sh        # Interactive menu
-  ./b2bua_sync.sh auto   # Auto-detects newer timestamp & synchronizes
-  ./b2bua_sync.sh push   # Pushes Linux configuration to NTFS/Windows partitions
+  ./b2bua_sync.sh auto   # Auto-detects newer timestamp & synchronizes across drives
+  ./b2bua_sync.sh push   # Pushes Linux configuration to all detected Windows/NTFS partitions
   ./b2bua_sync.sh pull   # Pulls Windows configuration into Linux & restarts service
+  ./b2bua_sync.sh export # 📦 Exports 1-Click ZIP Archive (JioFiber_Config_Backup.zip) to Desktop
+  ./b2bua_sync.sh import # 📥 Imports configuration directly from a ZIP Archive
   ./b2bua_sync.sh diff   # Compares config files across both OSes
   ```
-* **🪟 From Windows**:
-  Double-click **`b2bua_sync.bat`** to synchronize `.env` and certificates directly between Windows and any installed WSL/Linux distribution.
+* **🪟 From Windows (`b2bua_sync.bat`)**:
+  * Double-click **`b2bua_sync.bat`** to scan all drive letters (`C:` through `Z:`) and sync directly with other Windows/Linux partitions, or export/import the portable `JioFiber_Config_Backup.zip` archive with 1 click.
 
 ---
 
