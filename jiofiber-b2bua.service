@@ -6,8 +6,10 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/opt/jiofiber-b2bua
-ExecStart=/opt/jiofiber-b2bua/bin/b2bua
+WorkingDirectory=/home/sidhant-aind/sipserver
+Environment="LD_LIBRARY_PATH=/home/sidhant-aind/sipserver/lib:/home/sidhant-aind/sipserver/bin/linux-amd64/lib:/usr/local/lib:/usr/lib"
+ExecStartPre=-/bin/sh -c 'command -v fuser >/dev/null && fuser -k -9 5061/udp 5061/tcp 5062/tcp 5062/udp 2>/dev/null || true'
+ExecStart=/home/sidhant-aind/sipserver/b2bua
 Restart=always
 RestartSec=5s
 LimitNOFILE=65536

@@ -9,6 +9,15 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+USER_HOME="/home/${SUDO_USER:-$USER}"
+
+# If run from outside, fallback to ~/sipserver if present
+if [ ! -f "$SCRIPT_DIR/bin/linux-amd64/b2bua" ] && [ ! -f "$SCRIPT_DIR/b2bua" ]; then
+    if [ -d "$USER_HOME/sipserver" ]; then
+        SCRIPT_DIR="$USER_HOME/sipserver"
+    fi
+fi
+
 BINARY_PATH="$SCRIPT_DIR/bin/linux-amd64/b2bua"
 
 if [ ! -f "$BINARY_PATH" ]; then

@@ -19,7 +19,7 @@ if [ -z "$LAN_IP" ]; then
     LAN_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
 fi
 if [ -z "$LAN_IP" ]; then
-    LAN_IP="192.168.29.195"
+    LAN_IP="192.168.29.4"
 fi
 
 # Allow overriding LAN IP via first argument if supplied
@@ -28,6 +28,16 @@ if [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 fi
 
 echo "[*] Local LAN Host IP: $LAN_IP"
+
+# Auto-update IPV4_ADDRESS in .env if present
+for ENV_FILE in "$SCRIPT_DIR/.env" "/home/${SUDO_USER:-$USER}/sipserver/.env"; do
+    if [ -f "$ENV_FILE" ]; then
+        if grep -q "^IPV4_ADDRESS=" "$ENV_FILE"; then
+            sed -i "s/^IPV4_ADDRESS=.*/IPV4_ADDRESS=$LAN_IP/" "$ENV_FILE"
+        fi
+    fi
+done
+
 echo "[*] Generating 2048-bit RSA Private Key..."
 openssl genrsa -out "$CERTS_DIR/key.pem" 2048 >/dev/null 2>&1
 
@@ -88,14 +98,20 @@ cat << EOF > "$CERTS_DIR/INSTRUCTIONS.txt"
 3. key.pem
    - 2048-bit Private Key for B2BUA server
 
-Configured IP SAN: $LOCAL_IP
+Configured IP SAN: $LAN_IP
 =====================================================================
 EOF
 
-# Copy to root and Desktop
+# Copy to root, user home sipserver, and Desktop
 cp "$CERTS_DIR/cert.pem" "$CERTS_DIR/key.pem" "$SCRIPT_DIR/" 2>/dev/null || true
-mkdir -p "$HOME/Desktop/JioFiber_TLS_Certs" 2>/dev/null || true
-cp "$CERTS_DIR"/* "$HOME/Desktop/JioFiber_TLS_Certs/" 2>/dev/null || true
+if [ -d "/home/${SUDO_USER:-$USER}/sipserver" ] && [ "$SCRIPT_DIR" != "/home/${SUDO_USER:-$USER}/sipserver" ]; then
+    cp "$CERTS_DIR/cert.pem" "$CERTS_DIR/key.pem" "/home/${SUDO_USER:-$USER}/sipserver/" 2>/dev/null || true
+    mkdir -p "/home/${SUDO_USER:-$USER}/sipserver/certs"
+    cp "$CERTS_DIR"/* "/home/${SUDO_USER:-$USER}/sipserver/certs/" 2>/dev/null || true
+fi
+DESKTOP_DIR="/home/${SUDO_USER:-$USER}/Desktop"
+mkdir -p "$DESKTOP_DIR/JioFiber_TLS_Certs" 2>/dev/null || true
+cp "$CERTS_DIR"/* "$DESKTOP_DIR/JioFiber_TLS_Certs/" 2>/dev/null || true
 
 echo ""
 echo "====================================================================="
