@@ -90,18 +90,49 @@ IDX=1
 echo "IP.$IDX = $LAN_IP" >> "$CNF_FILE"; IDX=$((IDX+1))
 echo "IP.$IDX = 127.0.0.1" >> "$CNF_FILE"; IDX=$((IDX+1))
 
-# Detect Active VPN Overlays (Tailscale, WireGuard, ZeroTier)
-TAILSCALE_IP=$(tailscale ip -4 2>/dev/null || ip -4 addr show tailscale0 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' || true)
-if [ -n "$TAILSCALE_IP" ]; then
-    echo "[*] Detected Active Tailscale IP: $TAILSCALE_IP"
-    echo "IP.$IDX = $TAILSCALE_IP" >> "$CNF_FILE"; IDX=$((IDX+1))
-fi
+# Detect Active VPN Overlays (Tailscale, WireGuard, NetBird, ZeroTier, Nebula, OpenVPN)
+DETECTED_VPNS=()
 
-WG_IP=$(ip -4 addr show wg0 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' || true)
-if [ -n "$WG_IP" ]; then
-    echo "[*] Detected Active WireGuard IP: $WG_IP"
-    echo "IP.$IDX = $WG_IP" >> "$CNF_FILE"; IDX=$((IDX+1))
-fi
+# Tailscale
+TAILSCALE_IP=$(tailscale ip -4 2>/dev/null || ip -4 addr show tailscale0 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' || true)
+[ -n "$TAILSCALE_IP" ] && DETECTED_VPNS+=("Tailscale:$TAILSCALE_IP")
+
+# WireGuard (wg0, wg1)
+for wg_dev in wg0 wg1; do
+    wg_ip=$(ip -4 addr show "$wg_dev" 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' || true)
+    [ -n "$wg_ip" ] && DETECTED_VPNS+=("WireGuard($wg_dev):$wg_ip")
+done
+
+# NetBird (wt0)
+NETBIRD_IP=$(ip -4 addr show wt0 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' || true)
+[ -n "$NETBIRD_IP" ] && DETECTED_VPNS+=("NetBird:$NETBIRD_IP")
+
+# ZeroTier (zt*, ztuga*, etc.)
+for zt_dev in $(ip -o link show 2>/dev/null | awk -F': ' '{print $2}' | grep -E '^zt'); do
+    zt_ip=$(ip -4 addr show "$zt_dev" 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' || true)
+    [ -n "$zt_ip" ] && DETECTED_VPNS+=("ZeroTier($zt_dev):$zt_ip")
+done
+
+# Nebula (nebula0, nebula1)
+for neb_dev in nebula0 nebula1; do
+    neb_ip=$(ip -4 addr show "$neb_dev" 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' || true)
+    [ -n "$neb_ip" ] && DETECTED_VPNS+=("Nebula:$neb_ip")
+done
+
+# OpenVPN (tun0, tun1)
+for tun_dev in tun0 tun1; do
+    tun_ip=$(ip -4 addr show "$tun_dev" 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' || true)
+    [ -n "$tun_ip" ] && DETECTED_VPNS+=("OpenVPN:$tun_ip")
+done
+
+# Register all detected VPN IPs into certificate SANs
+for vpn_entry in "${DETECTED_VPNS[@]}"; do
+    v_name="${vpn_entry%%:*}"
+    v_ip="${vpn_entry##*:}"
+    echo "[*] Detected Active $v_name IP: $v_ip"
+    echo "IP.$IDX = $v_ip" >> "$CNF_FILE"
+    IDX=$((IDX+1))
+done
 
 # All subnets, all hosts 1-254
 for SUBNET in "${SUBNETS[@]}"; do
@@ -109,16 +140,22 @@ for SUBNET in "${SUBNETS[@]}"; do
         IP="${SUBNET}.${HOST}"
         # Skip if already added
         [ "$IP" = "$LAN_IP" ] && continue
-        [ "$IP" = "$TAILSCALE_IP" ] && continue
-        [ "$IP" = "$WG_IP" ] && continue
         echo "IP.$IDX = $IP" >> "$CNF_FILE"
         IDX=$((IDX+1))
     done
 done
 
-# DNS names — always valid regardless of IP / VPN
+# DNS names — Mesh VPN domains, local mDNS, hostnames
 DIDX=1
-for DNS_NAME in "JioFiberB2BUA" "jiofiber-b2bua" "localhost" "br.wln.ims.jio.com" "*.ts.net" "*.local" "$LAN_IP" "$TAILSCALE_IP"; do
+DNS_DOMAINS=(
+    "LocalLAN_RootCA" "locallan-rootca" "JioFiberB2BUA" "jiofiber-b2bua"
+    "localhost" "br.wln.ims.jio.com"
+    "*.ts.net" "*.netbird.cloud" "*.netbird.selfhosted"
+    "*.local" "*.lan" "*.home" "*.homelab" "*.internal" "*.trycloudflare.com"
+    "$LAN_IP" "$TAILSCALE_IP" "$NETBIRD_IP"
+)
+
+for DNS_NAME in "${DNS_DOMAINS[@]}"; do
     [ -z "$DNS_NAME" ] && continue
     echo "DNS.$DIDX = $DNS_NAME" >> "$CNF_FILE"
     DIDX=$((DIDX+1))
@@ -126,7 +163,7 @@ done
 
 TOTAL_IPS=$((IDX - 1))
 TOTAL_DNS=$((DIDX - 1))
-echo "[*] SAN coverage: $TOTAL_IPS IP addresses + $TOTAL_DNS DNS/VPN names"
+echo "[*] SAN coverage: $TOTAL_IPS IP addresses + $TOTAL_DNS Mesh VPN / DNS domains"
 
 openssl req -x509 -new -nodes -key "$CERTS_DIR/${CERT_NAME}.key" -sha256 -days 3650 \
     -out "$CERTS_DIR/${CERT_NAME}.pem" -config "$CNF_FILE" -extensions v3_ca >/dev/null 2>&1

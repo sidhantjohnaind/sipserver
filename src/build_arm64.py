@@ -106,7 +106,8 @@ obj_str = " ".join([f'"{vo}"' for vo in valid_objs])
 out_dir = os.path.join(root, 'bin', 'linux-arm64')
 os.makedirs(out_dir, exist_ok=True)
 out_bin = os.path.join(out_dir, 'b2bua')
-link_cmd = f'aarch64-linux-gnu-g++ -o "{out_bin}" {obj_str} -L/tmp/arm64_sysroot/usr/lib/aarch64-linux-gnu -lssl -lcrypto -lpthread -lm'
+lib_dir = os.path.join(out_dir, 'lib')
+link_cmd = f'aarch64-linux-gnu-g++ -o "{out_bin}" {obj_str} -L"{lib_dir}" -lssl -lcrypto -lpthread -lm -lrt -ldl'
 
 print("\nLinking native Linux ARM64 executable bin/linux-arm64/b2bua...")
 res = subprocess.run(link_cmd, shell=True, capture_output=True, text=True)
