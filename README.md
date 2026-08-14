@@ -104,6 +104,8 @@ The generated certificates have full **X.509 v3 `CA:TRUE`** capabilities with br
 #### 🌐 Using for Local HTTPS Web Servers:
 Because the certificate is a full Root CA with broad IP SANs and `serverAuth` key usage, you can use it in **Nginx / Caddy / Node.js / Apache** to serve local HTTPS dashboards with a **🔒 Green padlock / zero warnings** on all trusted devices.
 
+> 💡 **Looking for a standalone, general-purpose local LAN SSL certificate generator?** Check out our dedicated standalone tool: **[LAN-TLS](https://github.com/sidhantjohnaind/lan-tls)**.
+
 #### 📱 How to Transfer & Install on Softphones:
 * **Inside Linphone App (Easiest — 0 OS install needed)**:
   1. Transfer `JioFiberB2BUA.pem` (or `cert.pem`) to your phone.
