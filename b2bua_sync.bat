@@ -18,7 +18,7 @@ echo =====================================================================
 echo    Current Active Directory: %SOURCE_DIR%
 echo.
 
-:: Detect all potential sipserver locations across all drive letters
+:: 1. Detect all potential sipserver locations across all Windows drive letters (C: to Z:)
 set "TARGET_COUNT=0"
 
 for %%D in (C D E F G H I J K L M N O P Q R S T U V W X Y Z) do (
@@ -37,7 +37,22 @@ for %%D in (C D E F G H I J K L M N O P Q R S T U V W X Y Z) do (
                 if /i not "%%~P"=="%SOURCE_DIR:~0,-1%" if /i not "%%~P\"=="%SOURCE_DIR%" (
                     set /a TARGET_COUNT+=1
                     set "TARGET_!TARGET_COUNT!=%%~P"
-                    echo    [!TARGET_COUNT!] Found Location: %%~P
+                    echo    [!TARGET_COUNT!] Found Windows Partition: %%~P
+                )
+            )
+        )
+    )
+)
+
+:: 2. Detect WSL Linux Distros (\\wsl$\ and \\wsl.localhost\)
+for %%W in ("\\wsl$" "\\wsl.localhost") do (
+    if exist "%%~W\" (
+        for /f "tokens=*" %%D in ('powershell -Command "Get-ChildItem '%%~W\' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName"') do (
+            for /f "tokens=*" %%U in ('powershell -Command "Get-ChildItem '%%D\home' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName"') do (
+                if exist "%%U\sipserver" (
+                    set /a TARGET_COUNT+=1
+                    set "TARGET_!TARGET_COUNT!=%%U\sipserver"
+                    echo    [!TARGET_COUNT!] Found WSL Linux Distro: %%U\sipserver
                 )
             )
         )
