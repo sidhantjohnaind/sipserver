@@ -161,6 +161,13 @@ static bool add_x509_ext(X509 *cert, int nid, const char *value) {
 }
 
 static bool generate_self_signed_cert(const std::string &cert_path, const std::string &key_path) {
+    /* Named output files: JioFiberB2BUA.pem, JioFiberB2BUA.key, JioFiberB2BUA.p12 */
+    std::string named_cert = "JioFiberB2BUA.pem";
+    std::string named_key  = "JioFiberB2BUA.key";
+    std::string named_crt  = "JioFiberB2BUA.crt";
+    std::string named_p12  = "JioFiberB2BUA.p12";
+    std::string named_pfx  = "JioFiberB2BUA.pfx";
+
     EVP_PKEY *pkey = EVP_PKEY_new();
     if (!pkey) return false;
 
@@ -179,11 +186,12 @@ static bool generate_self_signed_cert(const std::string &cert_path, const std::s
     X509_set_pubkey(x509, pkey);
 
     std::string lan_ip = get_env_def("IPV4_ADDRESS", "192.168.29.4");
+    std::string cn_name = "JioFiber B2BUA (" + lan_ip + ")";
 
     X509_NAME *name = (X509_NAME*)X509_get_subject_name(x509);
     X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, (const unsigned char*)"IN", -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, (const unsigned char*)"JioB2BUA", -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (const unsigned char*)lan_ip.c_str(), -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, (const unsigned char*)"JioFiberB2BUA", -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (const unsigned char*)cn_name.c_str(), -1, -1, 0);
 
     X509_set_issuer_name(x509, name);
 
@@ -195,31 +203,47 @@ static bool generate_self_signed_cert(const std::string &cert_path, const std::s
 
     X509_sign(x509, pkey, EVP_sha256());
 
-    /* 1. Write Private Key */
-    BIO *bio_key = BIO_new_file(key_path.c_str(), "w");
+    /* 1. Write Private Key - named JioFiberB2BUA.key + legacy key.pem */
+    BIO *bio_key = BIO_new_file(named_key.c_str(), "w");
     if (bio_key) {
         PEM_write_bio_PrivateKey(bio_key, pkey, NULL, NULL, 0, NULL, NULL);
         BIO_free(bio_key);
     }
+    /* Legacy key.pem (for backwards compat with TLS_KEY_FILE default) */
+    BIO *bio_key2 = BIO_new_file(key_path.c_str(), "w");
+    if (bio_key2) {
+        PEM_write_bio_PrivateKey(bio_key2, pkey, NULL, NULL, 0, NULL, NULL);
+        BIO_free(bio_key2);
+    }
 
-    /* 2. Write Public Certificate (PEM) */
-    BIO *bio_cert = BIO_new_file(cert_path.c_str(), "w");
+    /* 2. Write Public Certificate - named JioFiberB2BUA.pem + legacy cert.pem */
+    BIO *bio_cert = BIO_new_file(named_cert.c_str(), "w");
     if (bio_cert) {
         PEM_write_bio_X509(bio_cert, x509);
         BIO_free(bio_cert);
     }
+    BIO *bio_cert2 = BIO_new_file(cert_path.c_str(), "w");
+    if (bio_cert2) {
+        PEM_write_bio_X509(bio_cert2, x509);
+        BIO_free(bio_cert2);
+    }
 
-    /* 3. Write CRT duplicate */
-    BIO *bio_crt = BIO_new_file("cert.crt", "w");
+    /* 3. Write CRT alias - named JioFiberB2BUA.crt + legacy cert.crt */
+    BIO *bio_crt = BIO_new_file(named_crt.c_str(), "w");
     if (bio_crt) {
         PEM_write_bio_X509(bio_crt, x509);
         BIO_free(bio_crt);
     }
+    BIO *bio_crt2 = BIO_new_file("cert.crt", "w");
+    if (bio_crt2) {
+        PEM_write_bio_X509(bio_crt2, x509);
+        BIO_free(bio_crt2);
+    }
 
-    /* 4. Write PKCS#12 bundle with password '1234' for Android/iOS KeyStore */
+    /* 4. Write PKCS#12 bundle - named JioFiberB2BUA.p12 + legacy cert.p12 */
     PKCS12 *p12 = PKCS12_create(
         (char*)"1234",
-        (char*)"JioFiberB2BUA",
+        (char*)"JioFiber B2BUA",   /* Friendly Name shown in Android/iOS */
         pkey,
         x509,
         NULL,
@@ -230,37 +254,44 @@ static bool generate_self_signed_cert(const std::string &cert_path, const std::s
         0
     );
     if (p12) {
-        BIO *bio_p12 = BIO_new_file("cert.p12", "wb");
-        if (bio_p12) {
-            i2d_PKCS12_bio(bio_p12, p12);
-            BIO_free(bio_p12);
-        }
-        BIO *bio_pfx = BIO_new_file("cert.pfx", "wb");
-        if (bio_pfx) {
-            i2d_PKCS12_bio(bio_pfx, p12);
-            BIO_free(bio_pfx);
-        }
+        BIO *bio_p12 = BIO_new_file(named_p12.c_str(), "wb");
+        if (bio_p12) { i2d_PKCS12_bio(bio_p12, p12); BIO_free(bio_p12); }
+        BIO *bio_pfx = BIO_new_file(named_pfx.c_str(), "wb");
+        if (bio_pfx) { i2d_PKCS12_bio(bio_pfx, p12); BIO_free(bio_pfx); }
+        /* Legacy cert.p12 / cert.pfx */
+        BIO *bio_p12b = BIO_new_file("cert.p12", "wb");
+        if (bio_p12b) { i2d_PKCS12_bio(bio_p12b, p12); BIO_free(bio_p12b); }
+        BIO *bio_pfxb = BIO_new_file("cert.pfx", "wb");
+        if (bio_pfxb) { i2d_PKCS12_bio(bio_pfxb, p12); BIO_free(bio_pfxb); }
         PKCS12_free(p12);
     }
 
-    /* 5. Synchronize into certs/ directory */
+    /* 5. Synchronize all named + legacy files into certs/ directory */
 #ifdef _WIN32
     CreateDirectoryA("certs", NULL);
-    CopyFileA(cert_path.c_str(), "certs\\cert.pem", FALSE);
-    CopyFileA(key_path.c_str(), "certs\\key.pem", FALSE);
+    CopyFileA(named_cert.c_str(), "certs\\JioFiberB2BUA.pem", FALSE);
+    CopyFileA(named_key.c_str(),  "certs\\JioFiberB2BUA.key", FALSE);
+    CopyFileA(named_crt.c_str(),  "certs\\JioFiberB2BUA.crt", FALSE);
+    CopyFileA(named_p12.c_str(),  "certs\\JioFiberB2BUA.p12", FALSE);
+    CopyFileA(named_pfx.c_str(),  "certs\\JioFiberB2BUA.pfx", FALSE);
+    CopyFileA(cert_path.c_str(),  "certs\\cert.pem", FALSE);
+    CopyFileA(key_path.c_str(),   "certs\\key.pem", FALSE);
     CopyFileA("cert.crt", "certs\\cert.crt", FALSE);
     CopyFileA("cert.p12", "certs\\cert.p12", FALSE);
     CopyFileA("cert.pfx", "certs\\cert.pfx", FALSE);
 #else
     mkdir("certs", 0755);
-    system("cp cert.pem key.pem cert.crt cert.p12 cert.pfx certs/ 2>/dev/null");
+    system("cp JioFiberB2BUA.pem JioFiberB2BUA.key JioFiberB2BUA.crt JioFiberB2BUA.p12 JioFiberB2BUA.pfx cert.pem key.pem cert.crt cert.p12 cert.pfx certs/ 2>/dev/null");
     system("mkdir -p ~/Desktop/JioFiber_TLS_Certs && cp certs/* ~/Desktop/JioFiber_TLS_Certs/ 2>/dev/null");
 #endif
 
     X509_free(x509);
     EVP_PKEY_free(pkey);
     std::cout << "[b2bua] Generated X.509v3 TLS certificates & Android PKCS#12 bundle in pure C++!\n";
-    std::cout << "[b2bua] -> cert.pem, cert.crt, cert.p12 (Password: '1234'), key.pem\n";
+    std::cout << "[b2bua] -> JioFiberB2BUA.pem  (install as Root CA in Linphone / phone trust store)\n";
+    std::cout << "[b2bua] -> JioFiberB2BUA.p12  (Password: '1234', friendly name: 'JioFiber B2BUA')\n";
+    std::cout << "[b2bua] -> JioFiberB2BUA.key  (private key for b2bua server)\n";
+    std::cout << "[b2bua] -> Legacy aliases: cert.pem, key.pem, cert.p12 also written.\n";
     return true;
 }
 
