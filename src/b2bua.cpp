@@ -20,6 +20,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 typedef int SOCKET;
@@ -47,6 +49,8 @@ extern "C" {
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/x509.h>
+#include <openssl/x509v3.h>
+#include <openssl/pkcs12.h>
 #include <openssl/pem.h>
 #include <openssl/rsa.h>
 #include <openssl/evp.h>
@@ -144,6 +148,18 @@ static bool file_exists(const std::string &filename) {
     return f.good();
 }
 
+static bool add_x509_ext(X509 *cert, int nid, const char *value) {
+    X509_EXTENSION *ex = NULL;
+    X509V3_CTX ctx;
+    X509V3_set_ctx_nodb(&ctx);
+    X509V3_set_ctx(&ctx, cert, cert, NULL, NULL, 0);
+    ex = X509V3_EXT_conf_nid(NULL, &ctx, nid, (char*)value);
+    if (!ex) return false;
+    X509_add_ext(cert, ex, -1);
+    X509_EXTENSION_free(ex);
+    return true;
+}
+
 static bool generate_self_signed_cert(const std::string &cert_path, const std::string &key_path) {
     EVP_PKEY *pkey = EVP_PKEY_new();
     if (!pkey) return false;
@@ -155,35 +171,93 @@ static bool generate_self_signed_cert(const std::string &cert_path, const std::s
     X509 *x509 = X509_new();
     if (!x509) { EVP_PKEY_free(pkey); return false; }
 
+    X509_set_version(x509, 2); /* X.509 v3 */
     ASN1_INTEGER_set(X509_get_serialNumber(x509), 1);
     X509_gmtime_adj(X509_get_notBefore(x509), 0);
-    X509_gmtime_adj(X509_get_notAfter(x509), 315360000L);
+    X509_gmtime_adj(X509_get_notAfter(x509), 315360000L); /* 10 Years */
 
     X509_set_pubkey(x509, pkey);
 
     X509_NAME *name = (X509_NAME*)X509_get_subject_name(x509);
     X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, (const unsigned char*)"IN", -1, -1, 0);
     X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, (const unsigned char*)"JioB2BUA", -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (const unsigned char*)"JioFiberB2BUA", -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (const unsigned char*)"192.168.29.195", -1, -1, 0);
 
     X509_set_issuer_name(x509, name);
+
+    add_x509_ext(x509, NID_basic_constraints, "critical,CA:TRUE");
+    add_x509_ext(x509, NID_key_usage, "critical,digitalSignature,keyCertSign,cRLSign,keyEncipherment");
+    add_x509_ext(x509, NID_ext_key_usage, "serverAuth,clientAuth");
+    add_x509_ext(x509, NID_subject_alt_name, "IP:192.168.29.195,IP:127.0.0.1,IP:0.0.0.0,DNS:192.168.29.195,DNS:localhost,DNS:JioFiberB2BUA,DNS:br.wln.ims.jio.com");
+
     X509_sign(x509, pkey, EVP_sha256());
 
+    /* 1. Write Private Key */
     BIO *bio_key = BIO_new_file(key_path.c_str(), "w");
     if (bio_key) {
         PEM_write_bio_PrivateKey(bio_key, pkey, NULL, NULL, 0, NULL, NULL);
         BIO_free(bio_key);
     }
 
+    /* 2. Write Public Certificate (PEM) */
     BIO *bio_cert = BIO_new_file(cert_path.c_str(), "w");
     if (bio_cert) {
         PEM_write_bio_X509(bio_cert, x509);
         BIO_free(bio_cert);
     }
 
+    /* 3. Write CRT duplicate */
+    BIO *bio_crt = BIO_new_file("cert.crt", "w");
+    if (bio_crt) {
+        PEM_write_bio_X509(bio_crt, x509);
+        BIO_free(bio_crt);
+    }
+
+    /* 4. Write PKCS#12 bundle with password '1234' for Android/iOS KeyStore */
+    PKCS12 *p12 = PKCS12_create(
+        (char*)"1234",
+        (char*)"JioFiberB2BUA",
+        pkey,
+        x509,
+        NULL,
+        NID_pbe_WithSHA1And3_Key_TripleDES_CBC,
+        NID_pbe_WithSHA1And3_Key_TripleDES_CBC,
+        2048,
+        1,
+        0
+    );
+    if (p12) {
+        BIO *bio_p12 = BIO_new_file("cert.p12", "wb");
+        if (bio_p12) {
+            i2d_PKCS12_bio(bio_p12, p12);
+            BIO_free(bio_p12);
+        }
+        BIO *bio_pfx = BIO_new_file("cert.pfx", "wb");
+        if (bio_pfx) {
+            i2d_PKCS12_bio(bio_pfx, p12);
+            BIO_free(bio_pfx);
+        }
+        PKCS12_free(p12);
+    }
+
+    /* 5. Synchronize into certs/ directory */
+#ifdef _WIN32
+    CreateDirectoryA("certs", NULL);
+    CopyFileA(cert_path.c_str(), "certs\\cert.pem", FALSE);
+    CopyFileA(key_path.c_str(), "certs\\key.pem", FALSE);
+    CopyFileA("cert.crt", "certs\\cert.crt", FALSE);
+    CopyFileA("cert.p12", "certs\\cert.p12", FALSE);
+    CopyFileA("cert.pfx", "certs\\cert.pfx", FALSE);
+#else
+    mkdir("certs", 0755);
+    system("cp cert.pem key.pem cert.crt cert.p12 cert.pfx certs/ 2>/dev/null");
+    system("mkdir -p ~/Desktop/JioFiber_TLS_Certs && cp certs/* ~/Desktop/JioFiber_TLS_Certs/ 2>/dev/null");
+#endif
+
     X509_free(x509);
     EVP_PKEY_free(pkey);
-    std::cout << "[b2bua] Generated self-signed TLS certificate: " << cert_path << " and key: " << key_path << std::endl;
+    std::cout << "[b2bua] Generated X.509v3 TLS certificates & Android PKCS#12 bundle in pure C++!\n";
+    std::cout << "[b2bua] -> cert.pem, cert.crt, cert.p12 (Password: '1234'), key.pem\n";
     return true;
 }
 
@@ -1104,39 +1178,27 @@ static void set_codecs() {
     }
 }
 
-/* ------------------------------------------------------------------ */
-/* Main                                                               */
-/* ------------------------------------------------------------------ */
-
-int main(int argc, char *argv[]) {
-    (void)argc;
-    (void)argv;
-
-    setvbuf(stdout, NULL, _IONBF, 0);
-    setvbuf(stderr, NULL, _IONBF, 0);
-
 #ifdef _WIN32
-    wchar_t exe_path[MAX_PATH];
-    if (GetModuleFileNameW(NULL, exe_path, MAX_PATH)) {
-        std::wstring ws(exe_path);
-        size_t pos = ws.find_last_of(L"\\/");
-        if (pos != std::wstring::npos) {
-            SetCurrentDirectoryW(ws.substr(0, pos).c_str());
-        }
+static SERVICE_STATUS        g_svc_status;
+static SERVICE_STATUS_HANDLE g_svc_status_handle = NULL;
+
+static VOID WINAPI ServiceCtrlHandler(DWORD request) {
+    switch (request) {
+        case SERVICE_CONTROL_STOP:
+        case SERVICE_CONTROL_SHUTDOWN:
+            g_svc_status.dwWin32ExitCode = 0;
+            g_svc_status.dwCurrentState = SERVICE_STOP_PENDING;
+            SetServiceStatus(g_svc_status_handle, &g_svc_status);
+            g_running = false;
+            break;
+        default:
+            break;
     }
-#else
-    char exe_buf[1024];
-    ssize_t len = readlink("/proc/self/exe", exe_buf, sizeof(exe_buf) - 1);
-    if (len > 0) {
-        exe_buf[len] = '\0';
-        std::string path_str(exe_buf);
-        size_t pos = path_str.find_last_of('/');
-        if (pos != std::string::npos) {
-            chdir(path_str.substr(0, pos).c_str());
-        }
-    }
+    SetServiceStatus(g_svc_status_handle, &g_svc_status);
+}
 #endif
 
+static int run_b2bua_server() {
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
 
@@ -1383,4 +1445,86 @@ int main(int argc, char *argv[]) {
     std::cout << "[b2bua] Shutting down B2BUA..." << std::endl;
     pjsua_destroy();
     return 0;
+}
+
+#ifdef _WIN32
+static VOID WINAPI ServiceMain(DWORD argc, LPTSTR *argv) {
+    (void)argc;
+    (void)argv;
+    g_svc_status_handle = RegisterServiceCtrlHandlerA("JioFiberB2BUA", ServiceCtrlHandler);
+    if (!g_svc_status_handle) return;
+
+    ZeroMemory(&g_svc_status, sizeof(g_svc_status));
+    g_svc_status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
+    g_svc_status.dwServiceSpecificExitCode = 0;
+    g_svc_status.dwWin32ExitCode = 0;
+    g_svc_status.dwCheckPoint = 0;
+    g_svc_status.dwWaitHint = 0;
+    g_svc_status.dwControlsAccepted = SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
+    g_svc_status.dwCurrentState = SERVICE_RUNNING;
+    SetServiceStatus(g_svc_status_handle, &g_svc_status);
+
+    run_b2bua_server();
+
+    g_svc_status.dwCurrentState = SERVICE_STOPPED;
+    SetServiceStatus(g_svc_status_handle, &g_svc_status);
+}
+#endif
+
+int main(int argc, char *argv[]) {
+    setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stderr, NULL, _IONBF, 0);
+
+#ifdef _WIN32
+    wchar_t exe_path[MAX_PATH];
+    if (GetModuleFileNameW(NULL, exe_path, MAX_PATH)) {
+        std::wstring ws(exe_path);
+        size_t pos = ws.find_last_of(L"\\/");
+        if (pos != std::wstring::npos) {
+            SetCurrentDirectoryW(ws.substr(0, pos).c_str());
+        }
+    }
+
+    bool force_console = false;
+    for (int i = 1; i < argc; ++i) {
+        if (std::string(argv[i]) == "--console" || std::string(argv[i]) == "-c") {
+            force_console = true;
+            break;
+        }
+    }
+
+    if (!force_console) {
+        SERVICE_TABLE_ENTRYA ServiceTable[] = {
+            { (LPSTR)"JioFiberB2BUA", (LPSERVICE_MAIN_FUNCTIONA)ServiceMain },
+            { NULL, NULL }
+        };
+        if (StartServiceCtrlDispatcherA(ServiceTable)) {
+            return 0;
+        }
+    }
+#else
+    char exe_buf[1024];
+    ssize_t len = readlink("/proc/self/exe", exe_buf, sizeof(exe_buf) - 1);
+    if (len > 0) {
+        exe_buf[len] = '\0';
+        std::string path_str(exe_buf);
+        size_t pos = path_str.find_last_of('/');
+        if (pos != std::string::npos) {
+            chdir(path_str.substr(0, pos).c_str());
+        }
+    }
+#endif
+
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--gen-cert" || arg == "--gen-certs" || arg == "-g") {
+            std::cout << "[b2bua] Generating fresh TLS certificates & PKCS#12 bundle in pure C++...\n";
+            std::string cert_file = get_env_def("TLS_CERT_FILE", "cert.pem");
+            std::string key_file  = get_env_def("TLS_KEY_FILE", "key.pem");
+            generate_self_signed_cert(cert_file, key_file);
+            return 0;
+        }
+    }
+
+    return run_b2bua_server();
 }

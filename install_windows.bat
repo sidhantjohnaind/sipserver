@@ -57,6 +57,7 @@ sc delete JioFiberB2BUA >nul 2>&1
 
 sc create JioFiberB2BUA binPath= "\"%EXE_PATH%\"" start= auto DisplayName= "JioFiber SIP B2BUA Service"
 sc description JioFiberB2BUA "Lightweight native SIP B2BUA proxy for JioFiber VoIP"
+sc failure JioFiberB2BUA reset= 86400 actions= restart/5000/restart/5000/restart/5000
 sc start JioFiberB2BUA
 
 echo.

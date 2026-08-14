@@ -14,6 +14,8 @@ msvc_objs/
 msvc_objs.rsp
 wsl_objs/
 arm64_objs/
+riscv64_objs/
+mingw_objs/
 __pycache__/
 *.pyc
 *.pyo
