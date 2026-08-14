@@ -9,7 +9,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 CERTS_DIR="$SCRIPT_DIR/certs"
 mkdir -p "$CERTS_DIR"
 
-CERT_NAME="JioFiberB2BUA"
+CERT_NAME="LocalLAN_RootCA"
 
 echo "====================================================================="
 echo "   JioFiber SIP B2BUA - Native TLS Certificate Generator"
@@ -57,8 +57,8 @@ prompt = no
 
 [req_distinguished_name]
 C = IN
-O = JioFiberB2BUA
-CN = JioFiberB2BUA
+O = LocalLAN
+CN = LocalLAN_RootCA
 
 [v3_ca]
 basicConstraints = critical, CA:TRUE
@@ -90,27 +90,43 @@ IDX=1
 echo "IP.$IDX = $LAN_IP" >> "$CNF_FILE"; IDX=$((IDX+1))
 echo "IP.$IDX = 127.0.0.1" >> "$CNF_FILE"; IDX=$((IDX+1))
 
+# Detect Active VPN Overlays (Tailscale, WireGuard, ZeroTier)
+TAILSCALE_IP=$(tailscale ip -4 2>/dev/null || ip -4 addr show tailscale0 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' || true)
+if [ -n "$TAILSCALE_IP" ]; then
+    echo "[*] Detected Active Tailscale IP: $TAILSCALE_IP"
+    echo "IP.$IDX = $TAILSCALE_IP" >> "$CNF_FILE"; IDX=$((IDX+1))
+fi
+
+WG_IP=$(ip -4 addr show wg0 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' || true)
+if [ -n "$WG_IP" ]; then
+    echo "[*] Detected Active WireGuard IP: $WG_IP"
+    echo "IP.$IDX = $WG_IP" >> "$CNF_FILE"; IDX=$((IDX+1))
+fi
+
 # All subnets, all hosts 1-254
 for SUBNET in "${SUBNETS[@]}"; do
     for HOST in $(seq 1 254); do
         IP="${SUBNET}.${HOST}"
-        # Skip if already added as primary IP
+        # Skip if already added
         [ "$IP" = "$LAN_IP" ] && continue
+        [ "$IP" = "$TAILSCALE_IP" ] && continue
+        [ "$IP" = "$WG_IP" ] && continue
         echo "IP.$IDX = $IP" >> "$CNF_FILE"
         IDX=$((IDX+1))
     done
 done
 
-# DNS names — always valid regardless of IP
+# DNS names — always valid regardless of IP / VPN
 DIDX=1
-for DNS_NAME in "JioFiberB2BUA" "jiofiber-b2bua" "localhost" "br.wln.ims.jio.com" "$LAN_IP"; do
+for DNS_NAME in "JioFiberB2BUA" "jiofiber-b2bua" "localhost" "br.wln.ims.jio.com" "*.ts.net" "*.local" "$LAN_IP" "$TAILSCALE_IP"; do
+    [ -z "$DNS_NAME" ] && continue
     echo "DNS.$DIDX = $DNS_NAME" >> "$CNF_FILE"
     DIDX=$((DIDX+1))
 done
 
 TOTAL_IPS=$((IDX - 1))
 TOTAL_DNS=$((DIDX - 1))
-echo "[*] SAN coverage: $TOTAL_IPS IP addresses + $TOTAL_DNS DNS names"
+echo "[*] SAN coverage: $TOTAL_IPS IP addresses + $TOTAL_DNS DNS/VPN names"
 
 openssl req -x509 -new -nodes -key "$CERTS_DIR/${CERT_NAME}.key" -sha256 -days 3650 \
     -out "$CERTS_DIR/${CERT_NAME}.pem" -config "$CNF_FILE" -extensions v3_ca >/dev/null 2>&1

@@ -88,9 +88,9 @@ The generated certificates have full **X.509 v3 `CA:TRUE`** capabilities with br
 * **Windows**: Double-click `generate_certs.bat`
 
 #### 📂 Generated Certificate Files (inside `certs/` & Desktop):
-1. **`JioFiberB2BUA.pem` / `JioFiberB2BUA.crt`**: Standard X.509 v3 public certificate with full `/24` LAN IP SANs & `CA:TRUE`.
-2. **`JioFiberB2BUA.p12` / `JioFiberB2BUA.pfx`**: Universal PKCS#12 bundle for Android/iOS with friendly name *"JioFiber B2BUA"* (Password: **`1234`**).
-3. **`JioFiberB2BUA.key`**: 2048-bit server private key.
+1. **`LocalLAN_RootCA.pem` / `LocalLAN_RootCA.crt`**: Standard X.509 v3 public certificate with full `/24` LAN IP SANs & `CA:TRUE`.
+2. **`LocalLAN_RootCA.p12` / `LocalLAN_RootCA.pfx`**: Universal PKCS#12 bundle for Android/iOS with friendly name *"LocalLAN Root CA"* (Password: **`1234`**).
+3. **`LocalLAN_RootCA.key`**: 2048-bit server private key.
 4. *(Legacy aliases `cert.pem`, `key.pem`, `cert.crt`, `cert.p12` are automatically maintained for backwards compatibility).*
 
 #### 🛡️ 1-Click Generic CA Trust Installers (Linux & Windows):
@@ -107,15 +107,17 @@ Because the certificate is a full Root CA with broad IP SANs and `serverAuth` ke
 > 💡 **Looking for a standalone, general-purpose local LAN SSL certificate generator?** Check out our dedicated standalone tool: **[LAN-TLS](https://github.com/sidhantjohnaind/lan-tls)**.
 
 #### 📱 How to Transfer & Install on Softphones:
+* **📱 1-Click Web Delivery Server**:
+  * Run `./send_to_phone.sh` (Linux) or `send_to_phone.bat` (Windows) and open the printed URL on your phone for 1-tap download and setup!
 * **Inside Linphone App (Easiest — 0 OS install needed)**:
-  1. Transfer `JioFiberB2BUA.pem` (or `cert.pem`) to your phone.
-  2. In **Linphone** -> **Settings ⚙️** -> **Network** -> **Root CA Certificate** -> Select `JioFiberB2BUA.pem`.
+  1. Transfer `LocalLAN_RootCA.pem` (or `cert.pem`) to your phone.
+  2. In **Linphone** -> **Settings ⚙️** -> **Network** -> **Root CA Certificate** -> Select `LocalLAN_RootCA.pem`.
   3. Set Transport to **TLS** (Port `5062`).
 * **Android System KeyStore ("VPN & App User Certificate")**:
-  1. Transfer `JioFiberB2BUA.p12` to phone -> Tap file -> Password: **`1234`** -> Tap **OK**.
+  1. Transfer `LocalLAN_RootCA.p12` to phone -> Tap file -> Password: **`1234`** -> Tap **OK**.
 * **🍏 iOS / iPhone**:
-  1. AirDrop/Download `JioFiberB2BUA.pem` -> Settings -> **Profile Downloaded** -> Install.
-  2. Settings -> **General** -> **About** -> **Certificate Trust Settings** -> Enable **Full Trust** for `JioFiberB2BUA`.
+  1. AirDrop/Download `LocalLAN_RootCA.pem` -> Settings -> **Profile Downloaded** -> Install.
+  2. Settings -> **General** -> **About** -> **Certificate Trust Settings** -> Enable **Full Trust** for `LocalLAN_RootCA`.
 
 #### 🔀 How to Switch from UDP Mode (Default) to TLS Mode:
 By default, `b2bua` operates in pure **UDP mode (Port 5061)** (`ENABLE_LOCAL_TLS=0`), requiring zero certificate setup. If you decide to enable TLS later:
@@ -139,8 +141,10 @@ By default, `b2bua` operates in pure **UDP mode (Port 5061)** (`ENABLE_LOCAL_TLS
      * **Windows**: Double-click `generate_certs.bat`
 
 3. **Configure Softphone for TLS (Port 5062)**:
-   * **Linphone (Mobile / Desktop)**: Set Server to `<your-pc-ip>:5062`, Transport to **TLS**, and select `JioFiberB2BUA.pem` as the Root CA Certificate.
-   * **MicroSIP (Windows)**: In Settings ➔ Network ➔ Check **TLS**, set Server to `<your-pc-ip>:5062`, and select `JioFiberB2BUA.pem` as the CA certificate.
+   * **Linphone (Mobile / Desktop)**: Set Server to `<your-pc-ip>:5062`, Transport to **TLS**, and select `LocalLAN_RootCA.pem` as the Root CA Certificate.
+   * **MicroSIP (Windows)**: In Settings ➔ Network ➔ Check **TLS**, set Server to `<your-pc-ip>:5062`, and select `LocalLAN_RootCA.pem` as the CA certificate.
+   * **Windows Trust (Optional)**: Double-click `install_ca_cert.bat` to trust the certificate system-wide for all Windows apps and browsers.
+
 #### 🔐 Security & Privacy (Per-Device Isolated Encryption):
 * **No Shared Session Keys**: Sharing the Root CA certificate only shares **identity/trust**. 
 * Every individual connection (e.g. Phone A vs Laptop B) negotiates a **unique, independent symmetric session key (`AES-256-GCM` via ECDHE)**.

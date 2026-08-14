@@ -1,7 +1,7 @@
 @echo off
 :: =====================================================================
 :: install_ca_cert.bat - 1-Click Windows CA Certificate Trust Installer
-:: Installs JioFiberB2BUA certificate into "Trusted Root Certification Authorities"
+:: Installs LocalLAN_RootCA certificate into "Trusted Root Certification Authorities"
 :: =====================================================================
 setlocal EnableDelayedExpansion
 
@@ -17,14 +17,14 @@ set "SCRIPT_DIR=%~dp0"
 set "CERT_FILE="
 
 :: Locate the certificate file
-if exist "%SCRIPT_DIR%JioFiberB2BUA.crt" set "CERT_FILE=%SCRIPT_DIR%JioFiberB2BUA.crt"
-if not defined CERT_FILE if exist "%SCRIPT_DIR%certs\JioFiberB2BUA.crt" set "CERT_FILE=%SCRIPT_DIR%certs\JioFiberB2BUA.crt"
+if exist "%SCRIPT_DIR%LocalLAN_RootCA.crt" set "CERT_FILE=%SCRIPT_DIR%LocalLAN_RootCA.crt"
+if not defined CERT_FILE if exist "%SCRIPT_DIR%certs\LocalLAN_RootCA.crt" set "CERT_FILE=%SCRIPT_DIR%certs\LocalLAN_RootCA.crt"
 if not defined CERT_FILE if exist "%SCRIPT_DIR%cert.crt" set "CERT_FILE=%SCRIPT_DIR%cert.crt"
 if not defined CERT_FILE if exist "%SCRIPT_DIR%certs\cert.crt" set "CERT_FILE=%SCRIPT_DIR%certs\cert.crt"
-if not defined CERT_FILE if exist "%SCRIPT_DIR%JioFiberB2BUA.pem" set "CERT_FILE=%SCRIPT_DIR%JioFiberB2BUA.pem"
+if not defined CERT_FILE if exist "%SCRIPT_DIR%LocalLAN_RootCA.pem" set "CERT_FILE=%SCRIPT_DIR%LocalLAN_RootCA.pem"
 
 if not defined CERT_FILE (
-    echo [ERROR] Certificate file (JioFiberB2BUA.crt / cert.crt) not found!
+    echo [ERROR] Certificate file (LocalLAN_RootCA.crt / cert.crt) not found!
     echo Please ensure certificate files exist in this folder.
     pause
     exit /b 1
@@ -41,7 +41,7 @@ certutil -addstore -f "ROOT" "%CERT_FILE%"
 if %errorlevel% equ 0 (
     echo.
     echo =====================================================================
-    echo    [SUCCESS] JioFiberB2BUA CA Certificate installed successfully!
+    echo    [SUCCESS] LocalLAN_RootCA CA Certificate installed successfully!
     echo    All Windows browsers (Edge, Chrome), apps, and services
     echo    will now trust HTTPS and TLS connections on your LAN without warnings.
     echo =====================================================================

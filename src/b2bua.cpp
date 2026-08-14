@@ -161,12 +161,12 @@ static bool add_x509_ext(X509 *cert, int nid, const char *value) {
 }
 
 static bool generate_self_signed_cert(const std::string &cert_path, const std::string &key_path) {
-    /* Named output files: JioFiberB2BUA.pem, JioFiberB2BUA.key, JioFiberB2BUA.p12 */
-    std::string named_cert = "JioFiberB2BUA.pem";
-    std::string named_key  = "JioFiberB2BUA.key";
-    std::string named_crt  = "JioFiberB2BUA.crt";
-    std::string named_p12  = "JioFiberB2BUA.p12";
-    std::string named_pfx  = "JioFiberB2BUA.pfx";
+    /* Named output files: LocalLAN_RootCA.pem, LocalLAN_RootCA.key, LocalLAN_RootCA.p12 */
+    std::string named_cert = "LocalLAN_RootCA.pem";
+    std::string named_key  = "LocalLAN_RootCA.key";
+    std::string named_crt  = "LocalLAN_RootCA.crt";
+    std::string named_p12  = "LocalLAN_RootCA.p12";
+    std::string named_pfx  = "LocalLAN_RootCA.pfx";
 
     EVP_PKEY *pkey = EVP_PKEY_new();
     if (!pkey) return false;
@@ -186,11 +186,11 @@ static bool generate_self_signed_cert(const std::string &cert_path, const std::s
     X509_set_pubkey(x509, pkey);
 
     std::string lan_ip = get_env_def("IPV4_ADDRESS", "192.168.29.4");
-    std::string cn_name = "JioFiberB2BUA";  /* Device-agnostic CN - no IP baked in */
+    std::string cn_name = "LocalLAN_RootCA";  /* Universal LAN Root CA */
 
     X509_NAME *name = (X509_NAME*)X509_get_subject_name(x509);
     X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, (const unsigned char*)"IN", -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, (const unsigned char*)"JioFiberB2BUA", -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, (const unsigned char*)"LocalLAN", -1, -1, 0);
     X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (const unsigned char*)cn_name.c_str(), -1, -1, 0);
 
     X509_set_issuer_name(x509, name);
@@ -212,11 +212,15 @@ static bool generate_self_signed_cert(const std::string &cert_path, const std::s
         "IP:192.168.0.1,IP:192.168.0.100,"
         "IP:192.168.31.1,IP:192.168.31.100,"
         "IP:10.0.0.1,IP:10.0.0.2,IP:10.0.0.100,IP:10.8.0.1,"
-        /* DNS names - always valid regardless of IP */
+        /* DNS names - always valid regardless of IP / VPN */
+        "DNS:LocalLAN_RootCA,"
+        "DNS:locallan-rootca,"
         "DNS:JioFiberB2BUA,"
         "DNS:jiofiber-b2bua,"
         "DNS:localhost,"
         "DNS:br.wln.ims.jio.com,"
+        "DNS:*.ts.net,"
+        "DNS:*.local,"
         "DNS:" + lan_ip;
     add_x509_ext(x509, NID_subject_alt_name, san_str.c_str());
 

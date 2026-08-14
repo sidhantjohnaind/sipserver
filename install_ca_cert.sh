@@ -8,7 +8,7 @@
 set -e
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-CERT_NAME="JioFiberB2BUA"
+CERT_NAME="LocalLAN_RootCA"
 
 # Locate certificate file
 CERT_FILE=""

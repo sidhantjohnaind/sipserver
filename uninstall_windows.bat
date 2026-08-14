@@ -21,8 +21,8 @@ echo.
 
 :: 1. Stop & Remove Windows Service
 echo [1/3] Stopping and deleting Windows Service...
-sc stop JioFiberB2BUA >nul 2>&1
-sc delete JioFiberB2BUA >nul 2>&1
+sc stop LocalLAN_RootCA >nul 2>&1
+sc delete LocalLAN_RootCA >nul 2>&1
 
 :: 2. Remove Windows Defender Firewall Rules
 echo [2/3] Cleaning up Windows Firewall rules...
@@ -33,7 +33,7 @@ netsh advfirewall firewall delete rule name="JioFiber RTP Audio Ports" >nul 2>&1
 
 :: 3. Remove Root CA Certificate from Store
 echo [3/3] Removing Root CA Certificate from Windows store...
-certutil -delstore "ROOT" "JioFiberB2BUA" >nul 2>&1
+certutil -delstore "ROOT" "LocalLAN_RootCA" >nul 2>&1
 
 echo.
 echo =====================================================================
