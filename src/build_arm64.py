@@ -20,8 +20,8 @@ inc_dirs = [
     os.path.join(pj_dir, 'pjmedia', 'include'),
     os.path.join(pj_dir, 'pjsip', 'include'),
     os.path.join(pj_dir, 'third_party', 'resample', 'include'),
-    os.path.join(root, 'third_party', 'opencore-amr', 'include'),
-    '/usr/include/aarch64-linux-gnu',
+    '/tmp/arm64_sysroot/usr/include',
+    '/tmp/arm64_sysroot/usr/include/aarch64-linux-gnu',
 ]
 
 subdirs = [
@@ -44,11 +44,13 @@ exact_excludes = {
     'silkg7221.c', 'sbc.c', 'plc_test.c', 'resample_test.c',
     'rtpdump.c', 'sdp_test.c', 'sip_rtp_test.c', 'sound_test.c',
     'tonegen_test.c', 'vid_port_test.c', 'b2bua.c', 'b2bua.cpp',
-    'ioqueue_select.c', 'ioqueue_dummy.c', 'ioqueue_common_abs.c',
+    'ioqueue_select.c', 'ioqueue_dummy.c', 'ioqueue_common_abs.c', 'ioqueue_kqueue.c',
     'os_core_win32.c', 'os_timestamp_win32.c', 'os_error_win32.c', 'guid_win32.c',
     'ip_helper_winphone8.c', 'ip_helper_win32.c', 'os_time_bsd.c', 'os_time_darwin.c',
     'os_core_bsd.c', 'os_core_darwin.c', 'os_core_rtems.c', 'os_core_symbian.c', 'os_core_vxworks.c',
-    'guid_android.c', 'guid_darwin.c', 'guid_bsd.c'
+    'guid_android.c', 'guid_darwin.c', 'guid_bsd.c', 'guid_uuid.c',
+    'extra-exports.c', 'log_writer_printk.c', 'pool_policy_kmalloc.c', 'sock_qos_wm.c',
+    'ssl_sock_imp_common.c', 'unittest.c', 'transport_srtp_sdes.c', 'transport_srtp_dtls.c', 'libresample_dll.c'
 }
 
 exclude_prefixes = ['test_', 'sample_']
@@ -104,7 +106,7 @@ obj_str = " ".join([f'"{vo}"' for vo in valid_objs])
 out_dir = os.path.join(root, 'bin', 'linux-arm64')
 os.makedirs(out_dir, exist_ok=True)
 out_bin = os.path.join(out_dir, 'b2bua')
-link_cmd = f'aarch64-linux-gnu-g++ -o "{out_bin}" {obj_str} -L/usr/lib/aarch64-linux-gnu -lssl -lcrypto -lpthread -lm'
+link_cmd = f'aarch64-linux-gnu-g++ -o "{out_bin}" {obj_str} -L/tmp/arm64_sysroot/usr/lib/aarch64-linux-gnu -lssl -lcrypto -lpthread -lm'
 
 print("\nLinking native Linux ARM64 executable bin/linux-arm64/b2bua...")
 res = subprocess.run(link_cmd, shell=True, capture_output=True, text=True)

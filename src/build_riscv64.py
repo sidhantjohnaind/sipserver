@@ -25,8 +25,8 @@ inc_dirs = [
     os.path.join(pj_dir, 'pjmedia', 'include'),
     os.path.join(pj_dir, 'pjsip', 'include'),
     os.path.join(pj_dir, 'third_party', 'resample', 'include'),
-    os.path.join(root, 'third_party', 'opencore-amr', 'include'),
-    '/usr/include/riscv64-linux-gnu',
+    '/tmp/riscv64_sysroot/usr/include',
+    '/tmp/riscv64_sysroot/usr/include/riscv64-linux-gnu',
 ]
 
 subdirs = [
@@ -49,11 +49,13 @@ exact_excludes = {
     'silkg7221.c', 'sbc.c', 'plc_test.c', 'resample_test.c',
     'rtpdump.c', 'sdp_test.c', 'sip_rtp_test.c', 'sound_test.c',
     'tonegen_test.c', 'vid_port_test.c', 'b2bua.c', 'b2bua.cpp',
-    'ioqueue_select.c', 'ioqueue_dummy.c', 'ioqueue_common_abs.c',
+    'ioqueue_select.c', 'ioqueue_dummy.c', 'ioqueue_common_abs.c', 'ioqueue_kqueue.c',
     'os_core_win32.c', 'os_timestamp_win32.c', 'os_error_win32.c', 'guid_win32.c',
     'ip_helper_winphone8.c', 'ip_helper_win32.c', 'os_time_bsd.c', 'os_time_darwin.c',
     'os_core_bsd.c', 'os_core_darwin.c', 'os_core_rtems.c', 'os_core_symbian.c', 'os_core_vxworks.c',
-    'guid_android.c', 'guid_darwin.c', 'guid_bsd.c'
+    'guid_android.c', 'guid_darwin.c', 'guid_bsd.c', 'guid_uuid.c',
+    'extra-exports.c', 'log_writer_printk.c', 'pool_policy_kmalloc.c', 'sock_qos_wm.c',
+    'ssl_sock_imp_common.c', 'unittest.c', 'transport_srtp_sdes.c', 'transport_srtp_dtls.c', 'libresample_dll.c'
 }
 
 exclude_prefixes = ['test_', 'sample_']
@@ -109,7 +111,7 @@ out_exe = os.path.join(output_dir, 'b2bua')
 
 print("\nLinking native Linux RISC-V 64 executable b2bua...")
 objs_str = " ".join([f'"{o}"' for o in valid_objs])
-link_cmd = f'riscv64-linux-gnu-g++ {objs_str} -o "{out_exe}" -lpthread -lssl -lcrypto -lopencore-amrnb -lopencore-amrwb -Wl,-rpath,\'$ORIGIN/lib\''
+link_cmd = f'riscv64-linux-gnu-g++ {objs_str} -o "{out_exe}" -L/tmp/riscv64_sysroot/usr/lib/riscv64-linux-gnu -lssl -lcrypto -lpthread -lm'
 
 res = subprocess.run(link_cmd, shell=True, capture_output=True, text=True)
 if res.returncode != 0:

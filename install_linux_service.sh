@@ -31,7 +31,8 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=$SCRIPT_DIR
-ExecStartPre=/usr/bin/fuser -k -9 5061/udp 5061/tcp 5062/udp 5062/tcp
+Environment="LD_LIBRARY_PATH=$SCRIPT_DIR/lib:$SCRIPT_DIR/bin/linux-amd64/lib:$SCRIPT_DIR/bin/linux-arm64/lib:/usr/local/lib:/usr/lib"
+ExecStartPre=-/bin/sh -c 'command -v fuser >/dev/null && fuser -k -9 5061/udp 5061/tcp 5062/tcp 5062/udp 2>/dev/null || true'
 ExecStart=$BINARY_PATH
 Restart=always
 RestartSec=5

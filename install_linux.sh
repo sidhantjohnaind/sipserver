@@ -21,12 +21,15 @@ echo "[*] Step 1/3: Detecting System Architecture ($ARCH)..."
 if [ "$ARCH" = "x86_64" ]; then
     BIN_NAME="b2bua-linux-amd64"
     LOCAL_BIN="$SCRIPT_DIR/bin/linux-amd64/b2bua"
+    LOCAL_LIB="$SCRIPT_DIR/bin/linux-amd64/lib"
 elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
     BIN_NAME="b2bua-linux-arm64"
     LOCAL_BIN="$SCRIPT_DIR/bin/linux-arm64/b2bua"
+    LOCAL_LIB="$SCRIPT_DIR/bin/linux-arm64/lib"
 else
     BIN_NAME="b2bua-linux-amd64"
     LOCAL_BIN="$SCRIPT_DIR/bin/linux-amd64/b2bua"
+    LOCAL_LIB="$SCRIPT_DIR/bin/linux-amd64/lib"
 fi
 
 TARGET_BIN="$SCRIPT_DIR/b2bua"
@@ -36,6 +39,11 @@ if [ -f "$LOCAL_BIN" ]; then
 elif [ ! -f "$TARGET_BIN" ]; then
     echo "[*] Downloading pre-built $BIN_NAME binary from GitHub Releases..."
     curl -sSL "https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/$BIN_NAME" -o "$TARGET_BIN"
+fi
+
+if [ -d "$LOCAL_LIB" ]; then
+    mkdir -p "$SCRIPT_DIR/lib"
+    cp -rn "$LOCAL_LIB"/* "$SCRIPT_DIR/lib/" 2>/dev/null || true
 fi
 
 if [ ! -f "$TARGET_BIN" ]; then
@@ -78,7 +86,8 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=$SCRIPT_DIR
-ExecStartPre=/usr/bin/fuser -k -9 5061/udp 5061/tcp 5062/tcp 5062/udp 2>/dev/null || true
+Environment="LD_LIBRARY_PATH=$SCRIPT_DIR/lib:$SCRIPT_DIR/bin/linux-amd64/lib:$SCRIPT_DIR/bin/linux-arm64/lib:/usr/local/lib:/usr/lib"
+ExecStartPre=-/bin/sh -c 'command -v fuser >/dev/null && fuser -k -9 5061/udp 5061/tcp 5062/tcp 5062/udp 2>/dev/null || true'
 ExecStart=$TARGET_BIN
 Restart=always
 RestartSec=5

@@ -12,13 +12,8 @@ echo "====================================================================="
 echo ""
 
 # Ensure executable permissions on Linux binary
-chmod +x bin/linux-amd64/b2bua
-
-# Check for .env file
-if [ ! -f ".env" ]; then
-    echo "[!] .env file not found. Running python3 create_env_jfibersip.py..."
-    python3 create_env_jfibersip.py
-fi
+chmod +x bin/linux-amd64/b2bua 2>/dev/null || true
+chmod +x b2bua 2>/dev/null || true
 
 # Stop any background processes holding ports 5061 / 5062
 echo "[*] Cleaning up any processes holding ports 5061 and 5062..."

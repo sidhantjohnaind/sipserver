@@ -67,7 +67,7 @@ Go to [Releases](https://github.com/sidhantjohnaind/sipserver/releases/tag/v1.0.
 
 ### 2. Provision credentials (one-time)
 
-The provisioner is **built directly into the binary**. Simply launch `b2bua` and it will automatically prompt for your Jio router IP and OTP if `.env` does not exist:
+The provisioner is **built directly into the binary (100% pure C++)**. Simply launch `b2bua` and it will automatically prompt for your Jio router IP and OTP if `.env` does not exist:
 
 - When launched for the first time, it prompts for your Jio router IP (usually `192.168.29.1`).
 - Enter the OTP sent to your registered Jio mobile number.
@@ -77,77 +77,85 @@ The provisioner is **built directly into the binary**. Simply launch `b2bua` and
   - **Option 3**: Disable Local TLS (UDP port 5061 only mode).
 - It automatically whitelists your device, fetches your SIP credentials, and saves `.env`.
 
-> **Installing Certificate on Phone**: Copy `cert.pem` to your phone. Select it in Linphone under **Settings -> Network -> Advanced / TLS -> Root CA** or install it into your phone's **System CA Certificate Store** to enable **Secured 🔒** UI badge.
-
 ---
 
-### How to Transfer & Install TLS Certificate (`cert.pem`) on Phone / Softphone
+### How to Generate & Install TLS Certificates for Softphones (Linphone / Zoiper)
 
-When Local TLS is enabled on port `5062`, `b2bua` auto-generates `cert.pem` on disk. Transfer and install `cert.pem` to your phone to get the **Secured 🔒** encrypted status badge:
+When Local TLS is enabled on port `5062`, `b2bua` provides high-compatibility X.509 v3 certificates with Subject Alternative Names (SAN) matching your local LAN host IP (e.g. `192.168.29.x`):
 
-#### 📱 Method 1: Transferring `cert.pem` to Your Phone
-* **Local Web Transfer (Fastest)**:
-  Run a quick local web server in your terminal folder:
+#### 🛠️ 1-Click Native Certificate Generator (Zero Python):
+* **Linux**: Run `./generate_certs.sh` (or `./generate_certs.sh 192.168.29.x`)
+* **Windows**: Double-click `generate_certs.bat`
+* **Open Folder**: Run `./open_tls_cert.sh` on Linux or double-click `open_tls_cert.bat` on Windows to open the `certs/` directory directly.
+
+#### 📂 Generated Certificate Files (inside `certs/` & Desktop):
+1. **`cert.pem` / `cert.crt`**: Standard X.509 v3 public certificate with LAN IP SANs & `CA:TRUE`.
+2. **`cert.p12` / `cert.pfx`**: Android/iOS Universal PKCS#12 bundle (Password: **`1234`**).
+3. **`key.pem`**: 2048-bit server private key.
+
+#### 📱 How to Transfer & Install on Phone / Softphones:
+
+* **Transfer Method (Optional Python Local Web Server)**:
   ```bash
   python -m http.server 8000
   ```
-  On your phone browser, navigate to `http://<YOUR-PC-IP>:8000/cert.pem` and download `cert.pem`.
-* **Alternative Methods**: Copy `cert.pem` via USB cable, AirDrop, Google Drive, Email, or Local Storage.
+  Open phone browser to `http://<your-pc-ip>:8000/certs/cert.pem` (or use USB cable, AirDrop, Google Drive, Email).
 
-#### 🤖 Android (Linphone & System Store)
-1. **Inside Linphone App**:
-   * Open **Linphone** -> **Settings** ⚙️ -> **Network** -> **TLS / CA Certificates**.
-   * Tap **Root CA** -> Browse and select `cert.pem`.
-   * Set Account Transport to **TLS** with port `5062`.
-2. **Android System CA Store (Optional)**:
-   * Open Phone **Settings** -> **Security & Privacy** -> **More Security Settings** -> **Encryption & Credentials**.
-   * Tap **Install a Certificate** -> **CA Certificate** -> Select `cert.pem`.
+* **Inside Linphone App (Easiest — 0 OS install needed)**:
+  1. Transfer `cert.pem` to your phone.
+  2. In **Linphone** -> **Settings ⚙️** -> **Network** -> **Root CA Certificate** -> Select `cert.pem`.
+  3. Set Transport to **TLS** (Port `5062`).
 
-#### 🍏 iOS / iPhone (Linphone & Profile Trust)
-1. AirDrop or download `cert.pem` to the **Files app** on your iPhone.
-2. Tap `cert.pem` -> Notice pop-up: *"Profile Downloaded"*.
-3. Open iPhone **Settings** -> Tap **Profile Downloaded** -> Tap **Install** (Enter passcode).
-4. Enable Full Trust: Go to **Settings** -> **General** -> **About** -> **Certificate Trust Settings** -> Enable **Full Trust** for `JioFiberB2BUA`.
-5. Open **Linphone** -> **Settings** -> **Network** -> Set Transport to **TLS** (Port `5062`).
+* **Android System KeyStore ("VPN & App User Certificate")**:
+  1. Transfer `cert.p12` to your phone.
+  2. Tap `cert.p12` -> Enter password: **`1234`** -> Tap **OK**. (Uses 3DES compatibility encryption).
 
-#### 💻 Windows (MicroSIP & Linphone Desktop)
-* **MicroSIP**: Copy `cert.pem` into your MicroSIP folder. In MicroSIP Settings -> Network -> Check **TLS** and select `cert.pem` as CA file.
-* **Linphone Desktop**: Open Preferences -> Network -> Advanced -> Select `cert.pem` as Root CA.
+* **🍏 iOS / iPhone**:
+  1. Download `cert.pem` into the **Files app** on your iPhone.
+  2. Open iPhone **Settings** -> Tap **Profile Downloaded** -> Tap **Install**.
+  3. Go to **Settings** -> **General** -> **About** -> **Certificate Trust Settings** -> Enable **Full Trust** for `JioFiberB2BUA`.
+
+* **💻 Windows / Desktop**:
+  * **MicroSIP**: In Settings -> Network -> Check **TLS** and select `cert.pem` as CA file.
+  * **Linphone Desktop**: Preferences -> Network -> Advanced -> Select `cert.pem` as Root CA.
 
 ---
 
-### 3. Run
+### 3. Run & Deployment Options
 
-**Windows — 1-Click Setup (`JioFiber_B2BUA_Setup.exe`):**
-When running `JioFiber_B2BUA_Setup.exe`, you can choose between two modes:
-1. **Service Mode [Default]**: Installs and starts `JioFiberB2BUA` as an automatic Windows background service that starts on boot.
-2. **Non-Service / Interactive Console Mode**: Runs `b2bua_msvc.exe` directly in a visible command window with live log output.
+#### 🪟 Windows:
+* **1-Click GUI Setup (`JioFiber_B2BUA_Setup.exe`) [Recommended]**:
+  - Automatically configures Windows Service, Firewall rules, and Desktop shortcuts.
+  - Choose between Background Service Mode or Console Mode during setup.
+* **Manual Batch Scripts**:
+  - **Run Console Mode**: Double-click `run_windows.bat`
+  - **Install Service**: Right-click `install_windows_service.bat` -> *Run as Administrator* (includes 5s auto-recovery)
+  - **Uninstall Service**: Right-click `uninstall_windows_service.bat` -> *Run as Administrator*
+  - **Free Stale Ports**: Double-click `kill_ports.bat` to clear ports `5061` / `5062`.
 
-**Windows (Manual Batch Scripts):**
-- **Interactive Console Mode**: Double click `run_windows.bat`
-- **Background Service Mode**: Run `install_windows_service.bat` (as Administrator)
-- **Uninstall Service**: Run `uninstall_windows_service.bat` (as Administrator)
+#### 🐧 Linux:
+* **1-Click Systemd Service Installer [Recommended]**:
+  ```bash
+  sudo bash install_linux.sh
+  ```
+  *(Or via curl: `curl -sSL https://raw.githubusercontent.com/sidhantjohnaind/sipserver/master/install_linux.sh | sudo bash`)*
+* **Manual Service Scripts**:
+  - **Install Service**: `sudo ./install_linux_service.sh`
+  - **Uninstall Service**: `sudo ./uninstall_linux_service.sh`
+  - **Run in WSL / Terminal**: `chmod +x run_wsl.sh && ./run_wsl.sh`
+  - **Free Stale Ports**: `chmod +x kill_ports.sh && ./kill_ports.sh`
+* **1-Click Portable AppImage**:
+  ```bash
+  chmod +x JioFiber_B2BUA-x86_64.AppImage
+  ./JioFiber_B2BUA-x86_64.AppImage
+  ```
 
-**Linux — 1-Click Systemd Service Installer:**
-Run this single command on any Linux terminal to install & start `jiofiber-b2bua` as an automatic background service (auto-starts on boot):
-```bash
-curl -sSL https://raw.githubusercontent.com/sidhantjohnaind/sipserver/master/install_linux.sh | sudo bash
-```
-
-**Linux — 1-Click Portable AppImage:**
-```bash
-chmod +x JioFiber_B2BUA-x86_64.AppImage
-./JioFiber_B2BUA-x86_64.AppImage
-```
-
-**Linux Service Management:**
+#### 📊 Linux Service Management:
 - **Status Check**: `sudo systemctl status jiofiber-b2bua`
 - **View Live Logs**: `sudo journalctl -u jiofiber-b2bua -f`
-- **Uninstall Service**: `sudo ./uninstall_linux_service.sh`
+- **Restart Service**: `sudo systemctl restart jiofiber-b2bua`
 
-> **Freeing Busy Ports (5061 / 5062)**: Both `run_windows.bat` and `run_wsl.sh` automatically terminate any stale background processes occupying ports 5061 or 5062 before starting. To manually free ports 5061 and 5062 at any time:
-> - **Windows**: Double-click `kill_ports.bat`
-> - **Linux / WSL**: Run `chmod +x kill_ports.sh && ./kill_ports.sh`
+---
 
 ### 4. Configure your softphone
 
@@ -161,10 +169,6 @@ chmod +x JioFiber_B2BUA-x86_64.AppImage
 > **TLS / Linphone Note**: When using **TLS** transport on port `5062`, Linphone displays **Secured 🔒** once `cert.pem` is imported into Linphone or your phone's Trust Store.
 >
 > **Tailscale users**: Use your Tailscale IP (e.g. `100.x.x.x:5061` or `100.x.x.x:5062`) as the SIP server in your softphone. The B2BUA automatically detects and uses the correct Tailscale interface.
-
----
-
-## Architecture
 
 ```
 Softphone (SIP/UDP or SIP/TLS)

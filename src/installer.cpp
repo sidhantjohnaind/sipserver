@@ -114,9 +114,22 @@ int main() {
         vl_file.close();
     }
 
-    // Create Desktop Shortcut for Log Viewer
+    // Write open_tls_cert.bat to target directory
+    std::string open_cert_path = target_dir + "\\open_tls_cert.bat";
+    std::ofstream oc_file(open_cert_path);
+    if (oc_file.is_open()) {
+        oc_file << "@echo off\n";
+        oc_file << "title JioFiber B2BUA - Open TLS Certificate Folder\n";
+        oc_file << "if exist \"%~dp0certs\" ( explorer.exe \"%~dp0certs\" ) else ( explorer.exe /select,\"%~dp0cert.pem\" )\n";
+        oc_file.close();
+    }
+
+    // Create Desktop Shortcuts
     std::string shortcut_cmd = "powershell -Command \"$s = (New-Object -ComObject WScript.Shell).CreateShortcut([Environment]::GetFolderPath('Desktop') + '\\JioFiber B2BUA Log Viewer.lnk'); $s.TargetPath = '" + view_logs_path + "'; $s.WorkingDirectory = '" + target_dir + "'; $s.Save()\"";
     run_cmd(shortcut_cmd);
+
+    std::string cert_shortcut_cmd = "powershell -Command \"$s = (New-Object -ComObject WScript.Shell).CreateShortcut([Environment]::GetFolderPath('Desktop') + '\\JioFiber TLS Certificate.lnk'); $s.TargetPath = '" + open_cert_path + "'; $s.WorkingDirectory = '" + target_dir + "'; $s.Save()\"";
+    run_cmd(cert_shortcut_cmd);
 
     std::cout << "[*] Step 2/3: Opening Windows Firewall ports...\n";
     run_cmd("netsh advfirewall firewall delete rule name=\"JioFiber B2BUA SIP UDP\" >nul 2>&1");
@@ -135,6 +148,7 @@ int main() {
         std::string sc_cmd = "sc create JioFiberB2BUA binPath= \"\\\"" + dst_exe + "\\\"\" start= auto DisplayName= \"JioFiber SIP B2BUA Service\"";
         run_cmd(sc_cmd);
         run_cmd("sc description JioFiberB2BUA \"Lightweight native SIP B2BUA proxy for JioFiber VoIP\"");
+        run_cmd("sc failure JioFiberB2BUA reset= 86400 actions= restart/5000/restart/5000/restart/5000");
         run_cmd("sc start JioFiberB2BUA");
 
         std::cout << "\n=====================================================================\n";
