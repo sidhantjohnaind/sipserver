@@ -8,6 +8,8 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 CERTS_DIR="$SCRIPT_DIR/certs"
 mkdir -p "$CERTS_DIR"
 
+CERT_NAME="JioFiberB2BUA"
+
 echo "====================================================================="
 echo "   JioFiber SIP B2BUA - Native TLS Certificate Generator"
 echo "====================================================================="
@@ -39,7 +41,7 @@ for ENV_FILE in "$SCRIPT_DIR/.env" "/home/${SUDO_USER:-$USER}/sipserver/.env"; d
 done
 
 echo "[*] Generating 2048-bit RSA Private Key..."
-openssl genrsa -out "$CERTS_DIR/key.pem" 2048 >/dev/null 2>&1
+openssl genrsa -out "$CERTS_DIR/${CERT_NAME}.key" 2048 >/dev/null 2>&1
 
 echo "[*] Generating X.509 v3 Certificate with SANs & CA:TRUE..."
 cat << EOF > /tmp/b2bua_san.cnf
@@ -50,8 +52,8 @@ prompt = no
 
 [req_distinguished_name]
 C = IN
-O = JioB2BUA
-CN = $LAN_IP
+O = JioFiberB2BUA
+CN = JioFiber B2BUA ($LAN_IP)
 
 [v3_ca]
 basicConstraints = critical, CA:TRUE
@@ -68,18 +70,28 @@ DNS.3 = JioFiberB2BUA
 DNS.4 = br.wln.ims.jio.com
 EOF
 
-openssl req -x509 -new -nodes -key "$CERTS_DIR/key.pem" -sha256 -days 3650 \
-    -out "$CERTS_DIR/cert.pem" -config /tmp/b2bua_san.cnf -extensions v3_ca >/dev/null 2>&1
+openssl req -x509 -new -nodes -key "$CERTS_DIR/${CERT_NAME}.key" -sha256 -days 3650 \
+    -out "$CERTS_DIR/${CERT_NAME}.pem" -config /tmp/b2bua_san.cnf -extensions v3_ca >/dev/null 2>&1
 rm -f /tmp/b2bua_san.cnf
 
-cp "$CERTS_DIR/cert.pem" "$CERTS_DIR/cert.crt"
+# CRT alias (same as PEM, some apps prefer .crt extension)
+cp "$CERTS_DIR/${CERT_NAME}.pem" "$CERTS_DIR/${CERT_NAME}.crt"
+
+# Keep legacy cert.pem / key.pem symlinks so binary can still find them
+ln -sf "${CERT_NAME}.pem" "$CERTS_DIR/cert.pem" 2>/dev/null || cp "$CERTS_DIR/${CERT_NAME}.pem" "$CERTS_DIR/cert.pem"
+ln -sf "${CERT_NAME}.key" "$CERTS_DIR/key.pem" 2>/dev/null  || cp "$CERTS_DIR/${CERT_NAME}.key" "$CERTS_DIR/key.pem"
+cp "$CERTS_DIR/${CERT_NAME}.pem" "$CERTS_DIR/cert.crt"
 
 echo "[*] Packaging Universal Android PKCS#12 bundle (Password: '1234')..."
 openssl pkcs12 -export -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -macalg sha1 \
-    -in "$CERTS_DIR/cert.pem" -inkey "$CERTS_DIR/key.pem" \
-    -out "$CERTS_DIR/cert.p12" -passout pass:1234 >/dev/null 2>&1
+    -name "$CERT_NAME" \
+    -in "$CERTS_DIR/${CERT_NAME}.pem" -inkey "$CERTS_DIR/${CERT_NAME}.key" \
+    -out "$CERTS_DIR/${CERT_NAME}.p12" -passout pass:1234 >/dev/null 2>&1
 
-cp "$CERTS_DIR/cert.p12" "$CERTS_DIR/cert.pfx"
+cp "$CERTS_DIR/${CERT_NAME}.p12" "$CERTS_DIR/${CERT_NAME}.pfx"
+# Legacy aliases
+ln -sf "${CERT_NAME}.p12" "$CERTS_DIR/cert.p12" 2>/dev/null || cp "$CERTS_DIR/${CERT_NAME}.p12" "$CERTS_DIR/cert.p12"
+ln -sf "${CERT_NAME}.pfx" "$CERTS_DIR/cert.pfx" 2>/dev/null || cp "$CERTS_DIR/${CERT_NAME}.pfx" "$CERTS_DIR/cert.pfx"
 
 # Write instructions
 cat << EOF > "$CERTS_DIR/INSTRUCTIONS.txt"
@@ -87,38 +99,47 @@ cat << EOF > "$CERTS_DIR/INSTRUCTIONS.txt"
   JioFiber SIP B2BUA - Generated TLS Certificate Files
 =====================================================================
 
-1. cert.p12 / cert.pfx
+1. ${CERT_NAME}.p12 / ${CERT_NAME}.pfx
+   - Friendly Name: $CERT_NAME
    - Password: 1234
-   - Use this if Android system asks for "Private key is required"
+   - Install on Android: Settings -> Security -> Install from storage
+   - Use this if Android/iOS asks for "Private key is required"
 
-2. cert.crt / cert.pem
+2. ${CERT_NAME}.crt / ${CERT_NAME}.pem
    - Standard X.509 v3 Public Certificate (with SAN & CA:TRUE)
-   - Use this inside Linphone (Settings -> Network -> Root CA Certificate)
+   - Install in Linphone: Settings -> Network -> Root CA Certificate
+   - CN: JioFiber B2BUA ($LAN_IP)
 
-3. key.pem
+3. ${CERT_NAME}.key
    - 2048-bit Private Key for B2BUA server
+   - Used by: b2bua (TLS_KEY_FILE)
 
 Configured IP SAN: $LAN_IP
 =====================================================================
 EOF
 
-# Copy to root, user home sipserver, and Desktop
-cp "$CERTS_DIR/cert.pem" "$CERTS_DIR/key.pem" "$SCRIPT_DIR/" 2>/dev/null || true
+# Copy to script root and user home sipserver
+cp "$CERTS_DIR/${CERT_NAME}.pem" "$CERTS_DIR/${CERT_NAME}.key" "$SCRIPT_DIR/" 2>/dev/null || true
+# Legacy names in root too
+ln -sf "${CERT_NAME}.pem" "$SCRIPT_DIR/cert.pem" 2>/dev/null || cp "$CERTS_DIR/${CERT_NAME}.pem" "$SCRIPT_DIR/cert.pem"
+ln -sf "${CERT_NAME}.key" "$SCRIPT_DIR/key.pem"  2>/dev/null || cp "$CERTS_DIR/${CERT_NAME}.key" "$SCRIPT_DIR/key.pem"
+
 if [ -d "/home/${SUDO_USER:-$USER}/sipserver" ] && [ "$SCRIPT_DIR" != "/home/${SUDO_USER:-$USER}/sipserver" ]; then
-    cp "$CERTS_DIR/cert.pem" "$CERTS_DIR/key.pem" "/home/${SUDO_USER:-$USER}/sipserver/" 2>/dev/null || true
+    cp "$CERTS_DIR/${CERT_NAME}.pem" "$CERTS_DIR/${CERT_NAME}.key" "/home/${SUDO_USER:-$USER}/sipserver/" 2>/dev/null || true
     mkdir -p "/home/${SUDO_USER:-$USER}/sipserver/certs"
-    cp "$CERTS_DIR"/* "/home/${SUDO_USER:-$USER}/sipserver/certs/" 2>/dev/null || true
+    cp -r "$CERTS_DIR"/. "/home/${SUDO_USER:-$USER}/sipserver/certs/" 2>/dev/null || true
 fi
+
 DESKTOP_DIR="/home/${SUDO_USER:-$USER}/Desktop"
 mkdir -p "$DESKTOP_DIR/JioFiber_TLS_Certs" 2>/dev/null || true
-cp "$CERTS_DIR"/* "$DESKTOP_DIR/JioFiber_TLS_Certs/" 2>/dev/null || true
+cp -r "$CERTS_DIR"/. "$DESKTOP_DIR/JioFiber_TLS_Certs/" 2>/dev/null || true
 
 echo ""
 echo "====================================================================="
 echo "   [SUCCESS] Native TLS Certificates Generated (Zero Python)!"
 echo "   -----------------------------------------------------------------"
-echo "   Certificate:    $CERTS_DIR/cert.pem"
-echo "   Private Key:    $CERTS_DIR/key.pem"
-echo "   Android P12:    $CERTS_DIR/cert.p12 (Password: '1234')"
-echo "   Desktop Folder: $HOME/Desktop/JioFiber_TLS_Certs"
+echo "   Certificate:    $CERTS_DIR/${CERT_NAME}.pem"
+echo "   Private Key:    $CERTS_DIR/${CERT_NAME}.key"
+echo "   Android P12:    $CERTS_DIR/${CERT_NAME}.p12  (Password: '1234')"
+echo "   Desktop Folder: $DESKTOP_DIR/JioFiber_TLS_Certs"
 echo "====================================================================="
