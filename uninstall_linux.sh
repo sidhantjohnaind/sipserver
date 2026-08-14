@@ -1,0 +1,54 @@
+#!/bin/bash
+# =====================================================================
+# uninstall_linux.sh - Complete Clean Uninstaller for JioFiber B2BUA
+# Removes systemd service, firewall rules, and CA certificates.
+# =====================================================================
+
+set -e
+
+if [ "$EUID" -ne 0 ]; then
+    echo "[!] Please run as root: sudo ./uninstall_linux.sh"
+    exit 1
+fi
+
+echo "====================================================================="
+echo "   JioFiber SIP B2BUA — Linux Uninstaller"
+echo "====================================================================="
+echo ""
+
+# 1. Stop & Disable Systemd Service
+echo "[1/4] Stopping and removing systemd service..."
+systemctl stop jiofiber-b2bua 2>/dev/null || true
+systemctl disable jiofiber-b2bua 2>/dev/null || true
+rm -f /etc/systemd/system/jiofiber-b2bua.service
+systemctl daemon-reload
+
+# 2. Remove CA Certificate from Trust Stores
+echo "[2/4] Removing CA certificate from system trust store..."
+rm -f /usr/local/share/ca-certificates/JioFiberB2BUA.crt \
+      /etc/pki/ca-trust/source/anchors/JioFiberB2BUA.crt \
+      /etc/ca-certificates/trust-source/anchors/JioFiberB2BUA.crt \
+      /etc/ssl/certs/JioFiberB2BUA.pem 2>/dev/null || true
+
+if command -v update-ca-certificates &>/dev/null; then
+    update-ca-certificates --fresh >/dev/null 2>&1 || update-ca-certificates >/dev/null 2>&1
+elif command -v update-ca-trust &>/dev/null; then
+    update-ca-trust >/dev/null 2>&1
+fi
+
+# 3. Clean up Firewall rules (UFW / Firewalld)
+echo "[3/4] Cleaning up firewall rules..."
+if command -v ufw &>/dev/null; then
+    ufw delete allow 5061/udp >/dev/null 2>&1 || true
+    ufw delete allow 5062/tcp >/dev/null 2>&1 || true
+    ufw delete allow 5068/tcp >/dev/null 2>&1 || true
+    ufw delete allow 52000:52100/udp >/dev/null 2>&1 || true
+fi
+
+# 4. Optional Data Directory Cleanup
+echo "[4/4] Installation cleanup completed."
+echo ""
+echo "====================================================================="
+echo "   [SUCCESS] JioFiber B2BUA service & certificates removed!"
+echo "   Note: Your .env and certs in ~/sipserver were preserved."
+echo "====================================================================="
