@@ -115,6 +115,18 @@ Because the certificate is a full Root CA with broad IP SANs and `serverAuth` ke
   1. AirDrop/Download `JioFiberB2BUA.pem` -> Settings -> **Profile Downloaded** -> Install.
   2. Settings -> **General** -> **About** -> **Certificate Trust Settings** -> Enable **Full Trust** for `JioFiberB2BUA`.
 
+#### 🔀 How to Switch from UDP Mode (Default) to TLS Mode:
+By default, `b2bua` operates in pure **UDP mode (Port 5061)** (`ENABLE_LOCAL_TLS=0`), requiring zero certificate setup. If you decide to enable TLS later:
+
+1. **Enable TLS in `.env`**:
+   * Change `ENABLE_LOCAL_TLS=0` to `ENABLE_LOCAL_TLS=1` in your `.env` file.
+   * Or run on Linux: `sed -i 's/^ENABLE_LOCAL_TLS=.*/ENABLE_LOCAL_TLS=1/' ~/sipserver/.env && sudo systemctl restart jiofiber-b2bua`
+2. **Automatic Certificate Handling**:
+   * If you don't have certificates yet, **`b2bua` automatically detects missing certs and generates a brand new 10-year pair on startup** on the fly!
+   * Or manually generate them anytime: `./generate_certs.sh` (Linux) or `generate_certs.bat` (Windows).
+3. **Configure Softphone**:
+   * In Linphone, set Server to `<your-pc-ip>:5062`, Transport to **TLS**, and import `JioFiberB2BUA.pem` as the Root CA.
+
 ---
 
 ### 🔄 Universal Multi-Boot & Dual-Boot Bidirectional Sync Tools
