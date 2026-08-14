@@ -72,9 +72,9 @@ The provisioner is **built directly into the binary (100% pure C++)**. Simply la
 - When launched for the first time, it prompts for your Jio router IP (usually `192.168.29.1`).
 - Enter the OTP sent to your registered Jio mobile number.
 - Prompt for Local TLS Certificate Setup:
-  - **Option 1 [Default]**: Generate a brand new TLS certificate pair (`cert.pem` & `key.pem`).
+  - **Option 1**: Generate a brand new TLS certificate pair (`cert.pem` & `key.pem`).
   - **Option 2**: Keep & use existing `cert.pem` from disk.
-  - **Option 3**: Disable Local TLS (UDP port 5061 only mode).
+  - **Option 3 [Default]**: Disable Local TLS (UDP port 5061 only mode).
 - It automatically whitelists your device, fetches your SIP credentials, and saves `.env`.
 
 ---
@@ -292,7 +292,7 @@ Depending on how you run JioFiber B2BUA, your configuration (`.env`) and TLS cer
 | `IPV4_ADDRESS` | Your PC's LAN IP | `192.168.29.195` |
 | `LOCAL_PORT` | UDP SIP port for softphones | `5061` |
 | `LOCAL_TLS_PORT` | Local TLS SIP port for softphones | `5062` |
-| `ENABLE_LOCAL_TLS` | Enable local TLS listener | `1` (or `0` to disable) |
+| `ENABLE_LOCAL_TLS` | Enable local TLS listener | `0` (disabled by default, UDP port 5061 only) |
 | `TLS_CERT_FILE` | Path to TLS Certificate file | `cert.pem` |
 | `TLS_KEY_FILE` | Path to TLS Private Key file | `key.pem` |
 | `GENERATE_NEW_TLS_CERT` | Force new cert pair on startup | `0` or `1` |

@@ -542,10 +542,10 @@ static bool run_cpp_otp_provisioner() {
 
     std::cout << "\n[b2bua] OTP Verified Successfully!\n";
     std::cout << "[b2bua] Prompt for Local TLS Certificate Setup:\n";
-    std::cout << "  Option 1 [Default]: Generate a brand new TLS certificate pair (cert.pem & key.pem).\n";
+    std::cout << "  Option 1: Generate a brand new TLS certificate pair (cert.pem & key.pem).\n";
     std::cout << "  Option 2: Keep & use existing cert.pem from disk.\n";
-    std::cout << "  Option 3: Disable Local TLS (UDP port 5061 only mode).\n";
-    std::cout << "Select option [1, 2, or 3, default: 1]: ";
+    std::cout << "  Option 3 [Default]: Disable Local TLS (UDP port 5061 only mode).\n";
+    std::cout << "Select option [1, 2, or 3, default: 3]: ";
     std::cout.flush();
 
     std::string cert_choice;
@@ -553,19 +553,19 @@ static bool run_cpp_otp_provisioner() {
     std::getline(std::cin, cert_choice);
     cert_choice = trim(cert_choice);
 
-    std::string gen_new_flag = "1";
-    std::string enable_tls_flag = "1";
+    std::string gen_new_flag = "0";
+    std::string enable_tls_flag = "0";
 
-    if (cert_choice == "2") {
-        enable_tls_flag = "1";
-        gen_new_flag = "0";
-    } else if (cert_choice == "3") {
-        enable_tls_flag = "0";
-        gen_new_flag = "0";
-    } else {
-        // Option 1 [Default]
+    if (cert_choice == "1") {
         enable_tls_flag = "1";
         gen_new_flag = "1";
+    } else if (cert_choice == "2") {
+        enable_tls_flag = "1";
+        gen_new_flag = "0";
+    } else {
+        // Option 3 [Default: Disable Local TLS, pure UDP port 5061 only mode]
+        enable_tls_flag = "0";
+        gen_new_flag = "0";
     }
 
     std::string default_ip = "192.168.29.4";
@@ -1292,7 +1292,7 @@ static int run_b2bua_server() {
     }
 
     /* Local TLS Transport (For local softphones on port 5062) */
-    std::string enable_loc_tls = get_env_def("ENABLE_LOCAL_TLS", "1");
+    std::string enable_loc_tls = get_env_def("ENABLE_LOCAL_TLS", "0");
     if (enable_loc_tls != "0" && enable_loc_tls != "false" && enable_loc_tls != "off") {
         pjsua_transport_config loc_tls_cfg;
         pjsua_transport_config_default(&loc_tls_cfg);
