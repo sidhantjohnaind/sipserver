@@ -19,20 +19,20 @@ fi
 PJ_DIR="$SCRIPT_DIR/third_party/pjproject-2.15.1"
 
 # Compile src/b2bua.c with PJSIP headers and libraries
-echo "[*] Compiling src/b2bua.c into bin/linux-amd64/b2bua..."
+echo "[*] Compiling src/b2bua.cpp and linking with pre-built objects..."
 
-gcc -O2 -DPJ_IS_BIG_ENDIAN=0 -DPJ_IS_LITTLE_ENDIAN=1 \
+g++ -O2 -std=c++17 -DPJ_IS_BIG_ENDIAN=0 -DPJ_IS_LITTLE_ENDIAN=1 \
     -I"$PJ_DIR" \
     -I"$PJ_DIR/pjlib/include" \
     -I"$PJ_DIR/pjlib-util/include" \
     -I"$PJ_DIR/pjnath/include" \
     -I"$PJ_DIR/pjmedia/include" \
     -I"$PJ_DIR/pjsip/include" \
-    -L"$SCRIPT_DIR/bin/linux-amd64/lib" \
-    src/b2bua.c -o bin/linux-amd64/b2bua \
-    -lpjsua -lpjsip-ua -lpjsip-simple -lpjsip -lpjmedia -lpjmedia-codec -lpjmedia-videodev -lpjmedia-audiodev -lpj-ssl -lpj -lssl -lcrypto -lm -lrt -lpthread -ldl
+    -c src/b2bua.cpp -o wsl_objs/0_b2bua.o
 
 if [ $? -eq 0 ]; then
+    g++ wsl_objs/*.o -o bin/linux-amd64/b2bua -lssl -lcrypto -lpthread -lm -lrt -ldl
+    cp bin/linux-amd64/b2bua b2bua
     echo ""
     echo "====================================================================="
     echo " [SUCCESS] Compiled bin/linux-amd64/b2bua successfully!"
