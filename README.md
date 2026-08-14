@@ -171,7 +171,7 @@ If you multi-boot (**Windows 11 / Windows 10 / Ubuntu / Debian / Arch**) on the 
 * **Manual Batch Scripts**:
   - **Run Console Mode**: Double-click `run_windows.bat`
   - **Install Service**: Right-click `install_windows_service.bat` -> *Run as Administrator* (includes 5s auto-recovery)
-  - **Uninstall Service**: Right-click `uninstall_windows_service.bat` -> *Run as Administrator*
+  - **Complete Uninstall**: Double-click `uninstall_windows.bat` (removes Windows Service, Firewall rules & CA certs)
   - **Free Stale Ports**: Double-click `kill_ports.bat` to clear ports `5061` / `5062`.
 
 #### 🐧 Linux:
@@ -180,10 +180,10 @@ If you multi-boot (**Windows 11 / Windows 10 / Ubuntu / Debian / Arch**) on the 
   sudo bash install_linux.sh
   ```
   *(Or via curl: `curl -sSL https://raw.githubusercontent.com/sidhantjohnaind/sipserver/master/install_linux.sh | sudo bash`)*
-* **Manual Service Scripts**:
-  - **Install Service**: `sudo ./install_linux_service.sh`
-  - **Uninstall Service**: `sudo ./uninstall_linux_service.sh`
-  - **Run in WSL / Terminal**: `chmod +x run_wsl.sh && ./run_wsl.sh`
+* **Manual & Uninstall Scripts**:
+  - **Complete Uninstall**: `sudo ./uninstall_linux.sh` (removes systemd service, firewall rules & CA certs)
+  - **Uninstall Service Only**: `sudo ./uninstall_linux_service.sh`
+  - **Run in Terminal**: `chmod +x run_wsl.sh && ./run_wsl.sh`
   - **Free Stale Ports**: `chmod +x kill_ports.sh && ./kill_ports.sh`
 * **1-Click Portable AppImage**:
   ```bash
