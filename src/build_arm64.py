@@ -49,6 +49,10 @@ exact_excludes = {
     'ip_helper_winphone8.c', 'ip_helper_win32.c', 'os_time_bsd.c', 'os_time_darwin.c',
     'os_core_bsd.c', 'os_core_darwin.c', 'os_core_rtems.c', 'os_core_symbian.c', 'os_core_vxworks.c',
     'guid_android.c', 'guid_darwin.c', 'guid_bsd.c', 'guid_uuid.c',
+    'ioqueue_winnt.c', 'os_rwmutex.c', 'scanner_cis_uint.c',
+    'echo_speex.c',
+    'echo_webrtc.c', 'echo_webrtc_aec3.c', 'g722.c', 'ilbc.c', 'speex_codec.c', 'gsm.c',
+    'srtp.c', 'transport_srtp.c',
     'extra-exports.c', 'log_writer_printk.c', 'pool_policy_kmalloc.c', 'sock_qos_wm.c',
     'ssl_sock_imp_common.c', 'unittest.c', 'transport_srtp_sdes.c', 'transport_srtp_dtls.c', 'libresample_dll.c'
 }
@@ -73,7 +77,7 @@ for sd in subdirs:
                 c_files.append(os.path.join(dpath, f))
 
 inc_cmd = " ".join([f'-I"{d}"' for d in inc_dirs])
-defs = '-DPJ_LINUX=1 -DPJ_HAS_IPV6=1 -D_GNU_SOURCE -DPJ_IS_LITTLE_ENDIAN=1 -DPJ_IS_BIG_ENDIAN=0 -DPJ_M_ARM64=1 -DPJ_HAS_NETINET_TCP_H=1 -DPJ_HAS_LIMITS_H=1 -DPJ_SOCK_HAS_INET_PTON=1 -DPJ_SOCK_HAS_INET_NTOP=1 -DPJ_SOCK_HAS_INET_ATON=1 -DPJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO=1 -DPJMEDIA_AUDIO_DEV_HAS_WMME=0 -DPJMEDIA_AUDIO_DEV_HAS_ALSA=0 -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=0 -DPJSIP_MAX_URL_SIZE=1024 -DPJMEDIA_HAS_OPENCORE_AMRNB_CODEC=0 -DPJMEDIA_HAS_G711_CODEC=1 -DPJMEDIA_HAS_G722_CODEC=1 -DPJMEDIA_HAS_GSM_CODEC=1'
+defs = '-DPJ_LINUX=1 -DPJ_HAS_IPV6=1 -D_GNU_SOURCE -DPJ_IS_LITTLE_ENDIAN=1 -DPJ_IS_BIG_ENDIAN=0 -DPJ_M_ARM64=1 -DPJ_HAS_NETINET_TCP_H=1 -DPJ_HAS_LIMITS_H=1 -DPJ_SOCK_HAS_INET_PTON=1 -DPJ_SOCK_HAS_INET_NTOP=1 -DPJ_SOCK_HAS_INET_ATON=1 -DPJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO=1 -DPJMEDIA_AUDIO_DEV_HAS_WMME=0 -DPJMEDIA_AUDIO_DEV_HAS_ALSA=0 -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=0 -DPJSIP_MAX_URL_SIZE=2048 -DPJMEDIA_HAS_OPENCORE_AMRNB_CODEC=1 -DPJMEDIA_HAS_OPENCORE_AMRWB_CODEC=1 -DPJMEDIA_HAS_G711_CODEC=1 -DPJMEDIA_HAS_G722_CODEC=0 -DPJMEDIA_HAS_GSM_CODEC=0 -DPJMEDIA_HAS_SPEEX_AEC=0 -DPJMEDIA_HAS_SRTP=0 -DPJMEDIA_HAS_SPEEX_CODEC=0 -DPJMEDIA_HAS_ILBC_CODEC=0'
 
 failed_files = []
 
@@ -107,7 +111,7 @@ out_dir = os.path.join(root, 'bin', 'linux-arm64')
 os.makedirs(out_dir, exist_ok=True)
 out_bin = os.path.join(out_dir, 'b2bua')
 lib_dir = os.path.join(out_dir, 'lib')
-link_cmd = f'aarch64-linux-gnu-g++ -o "{out_bin}" {obj_str} -L"{lib_dir}" -lssl -lcrypto -lpthread -lm -lrt -ldl'
+link_cmd = f'aarch64-linux-gnu-g++ -o "{out_bin}" {obj_str} -L"{lib_dir}" -lopencore-amrnb -lopencore-amrwb -lvo-amrwbenc -lssl -lcrypto -lpthread -lm -lrt -ldl'
 
 print("\nLinking native Linux ARM64 executable bin/linux-arm64/b2bua...")
 res = subprocess.run(link_cmd, shell=True, capture_output=True, text=True)

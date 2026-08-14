@@ -17,10 +17,16 @@ rm -rf "$APP_DIR"
 mkdir -p "$APP_DIR/usr/bin"
 mkdir -p "$APP_DIR/usr/share/icons/hicolor/256x256/apps"
 
-# 1. Copy Binary
+# 1. Copy Binary & Icon
 BIN_PATH="$ROOT_DIR/bin/linux-amd64/b2bua"
 if [ ! -f "$BIN_PATH" ]; then
     BIN_PATH="$ROOT_DIR/b2bua"
+fi
+
+ICON_PATH="$ROOT_DIR/third_party/pjproject-2.15.1/pjsip-apps/src/pjsua/ios/ipjsua/pjsua.png"
+if [ -f "$ICON_PATH" ]; then
+    cp "$ICON_PATH" "$APP_DIR/jiofiber-b2bua.png"
+    cp "$ICON_PATH" "$APP_DIR/usr/share/icons/hicolor/256x256/apps/jiofiber-b2bua.png"
 fi
 
 if [ ! -f "$BIN_PATH" ]; then
