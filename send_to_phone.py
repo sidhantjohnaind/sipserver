@@ -161,11 +161,27 @@ class CertRequestHandler(SimpleHTTPRequestHandler):
 
         return super().do_GET()
 
+class ReusableHTTPServer(HTTPServer):
+    allow_reuse_address = True
+
 def run_server():
     lan_ip = get_lan_ip()
-    url = f"http://{lan_ip}:{PORT}/"
+    port = PORT
+    server = None
     
-    server = HTTPServer(("0.0.0.0", PORT), CertRequestHandler)
+    for candidate_port in (8000, 8080, 8888, 5000, 9000):
+        try:
+            server = ReusableHTTPServer(("0.0.0.0", candidate_port), CertRequestHandler)
+            port = candidate_port
+            break
+        except OSError:
+            continue
+            
+    if not server:
+        print("[ERROR] Could not bind to any port (8000, 8080, 8888, 5000).")
+        sys.exit(1)
+
+    url = f"http://{lan_ip}:{port}/"
     
     print("=" * 65)
     print("   📱 JioFiber SIP & TLS — Mobile Certificate Delivery Server")
