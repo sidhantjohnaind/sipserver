@@ -83,33 +83,45 @@ HTML_PAGE = """<!DOCTYPE html>
             <p>1-Tap Certificate Download Portal for Softphones</p>
         </div>
 
-        <!-- Android Section -->
-        <div class="card">
-            <h2>📱 Android KeyStore <span class="badge">PKCS#12</span></h2>
-            <p style="font-size: 13px; color: #94a3b8;">For Android system-wide trust (Chrome, Apps, SIP clients).</p>
-            <a href="/LocalLAN_RootCA.p12" class="btn btn-android">⬇️ Download LocalLAN_RootCA.p12</a>
+        <!-- Samsung Galaxy / Android CA Certificate Section -->
+        <div class="card" style="border-color: #3b82f6;">
+            <h2>🌌 Samsung Galaxy / Android <span class="badge" style="color: #60a5fa; background: #1e3a8a;">cacert.crt</span></h2>
+            <p style="font-size: 13px; color: #94a3b8;">Filtered for Samsung One UI & Android "Install CA Certificate" file picker.</p>
+            <a href="/LocalLAN_RootCA.cacert.crt" class="btn" style="background: #3b82f6; color: #ffffff;">⬇️ Download LocalLAN_RootCA.cacert.crt</a>
             <ol class="steps">
                 <li>Tap <b>Download</b> above.</li>
-                <li>When prompted for password, enter: <b><code>1234</code></b></li>
-                <li>Set Credential Use to <b>VPN and Apps</b> / <b>CA Certificate</b> and tap OK.</li>
+                <li>Go to phone <b>Settings ⚙️</b> ➔ <b>Security and privacy</b>.</li>
+                <li>Tap <b>More security settings</b> ➔ <b>Install from device storage</b>.</li>
+                <li>Select <b>CA certificate</b> ➔ Tap <b>Install anyway</b> ➔ Select downloaded <code>.cacert.crt</code> file.</li>
+            </ol>
+        </div>
+
+        <!-- Android PKCS#12 Section -->
+        <div class="card">
+            <h2>📱 Android KeyStore <span class="badge">PKCS#12 (.p12)</span></h2>
+            <p style="font-size: 13px; color: #94a3b8;">Standard Android VPN & App credentials bundle.</p>
+            <a href="/LocalLAN_RootCA.p12" class="btn btn-android">⬇️ Download LocalLAN_RootCA.p12</a>
+            <ol class="steps">
+                <li>Tap <b>Download</b> above ➔ Enter password: <b><code>1234</code></b></li>
+                <li>Set Credential Use to <b>VPN and Apps</b> / <b>CA Certificate</b>.</li>
             </ol>
         </div>
 
         <!-- iOS / iPhone Section -->
         <div class="card">
-            <h2>🍏 iOS / iPhone <span class="badge">Profile</span></h2>
+            <h2>🍏 iOS / iPhone <span class="badge">Profile (.pem)</span></h2>
             <p style="font-size: 13px; color: #94a3b8;">For iPhones and iPads (Safari & iOS SIP clients).</p>
             <a href="/LocalLAN_RootCA.pem" class="btn btn-ios">⬇️ Download LocalLAN_RootCA.pem</a>
             <ol class="steps">
                 <li>Tap <b>Download</b> above ➔ Allow profile download.</li>
                 <li>Go to <b>Settings ⚙️</b> ➔ Tap <b>Profile Downloaded</b> ➔ Install.</li>
-                <li>Go to <b>Settings</b> ➔ <b>General</b> ➔ <b>About</b> ➔ <b>Certificate Trust Settings</b> ➔ Enable <b>Full Trust</b> for LocalLAN_RootCA.</li>
+                <li>Go to <b>Settings</b> ➔ <b>General</b> ➔ <b>About</b> ➔ <b>Certificate Trust Settings</b> ➔ Enable <b>Full Trust</b>.</li>
             </ol>
         </div>
 
         <!-- Linphone App Direct -->
         <div class="card">
-            <h2>📞 Linphone Softphone <span class="badge">Direct Root CA</span></h2>
+            <h2>📞 Linphone Softphone <span class="badge">Direct Root CA (.crt)</span></h2>
             <p style="font-size: 13px; color: #94a3b8;">Directly import into Linphone (no OS trust required).</p>
             <a href="/LocalLAN_RootCA.crt" class="btn btn-linphone">⬇️ Download LocalLAN_RootCA.crt</a>
             <ol class="steps">
@@ -131,6 +143,15 @@ class CertRequestHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=CERTS_DIR, **kwargs)
 
+    def guess_type(self, path):
+        if path.endswith((".crt", ".cacert.crt")):
+            return "application/x-x509-ca-cert"
+        if path.endswith((".pem", ".cacert.pem")):
+            return "application/x-pem-file"
+        if path.endswith((".p12", ".pfx")):
+            return "application/x-pkcs12"
+        return super().guess_type(path)
+
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path in ("/", "/index.html"):
@@ -142,15 +163,20 @@ class CertRequestHandler(SimpleHTTPRequestHandler):
             self.wfile.write(body)
             return
         
-        # Fallback aliases (cert.p12 -> JioFiberB2BUA.p12, etc.)
+        # Fallback aliases
         alias_map = {
-            "/cert.p12": "JioFiberB2BUA.p12",
-            "/cert.pfx": "JioFiberB2BUA.pfx",
-            "/cert.pem": "JioFiberB2BUA.pem",
-            "/cert.crt": "JioFiberB2BUA.crt",
-            "/key.pem":  "JioFiberB2BUA.key",
-            "/LocalLAN_RootCA.pem": "JioFiberB2BUA.pem",
-            "/LocalLAN_RootCA.p12": "JioFiberB2BUA.p12"
+            "/LocalLAN_RootCA.cacert.crt": "LocalLAN_RootCA.crt",
+            "/LocalLAN_RootCA.cacert.pem": "LocalLAN_RootCA.pem",
+            "/cacert.crt": "LocalLAN_RootCA.crt",
+            "/cacert.pem": "LocalLAN_RootCA.pem",
+            "/cert.p12": "LocalLAN_RootCA.p12",
+            "/cert.pfx": "LocalLAN_RootCA.pfx",
+            "/cert.pem": "LocalLAN_RootCA.pem",
+            "/cert.crt": "LocalLAN_RootCA.crt",
+            "/key.pem":  "LocalLAN_RootCA.key",
+            "/JioFiberB2BUA.pem": "LocalLAN_RootCA.pem",
+            "/JioFiberB2BUA.p12": "LocalLAN_RootCA.p12",
+            "/JioFiberB2BUA.crt": "LocalLAN_RootCA.crt",
         }
         
         req_path = parsed.path
