@@ -120,12 +120,26 @@ By default, `b2bua` operates in pure **UDP mode (Port 5061)** (`ENABLE_LOCAL_TLS
 
 1. **Enable TLS in `.env`**:
    * Change `ENABLE_LOCAL_TLS=0` to `ENABLE_LOCAL_TLS=1` in your `.env` file.
-   * Or run on Linux: `sed -i 's/^ENABLE_LOCAL_TLS=.*/ENABLE_LOCAL_TLS=1/' ~/sipserver/.env && sudo systemctl restart jiofiber-b2bua`
+   * **🐧 On Linux**:
+     ```bash
+     sed -i 's/^ENABLE_LOCAL_TLS=.*/ENABLE_LOCAL_TLS=1/' ~/sipserver/.env
+     sudo systemctl restart jiofiber-b2bua
+     ```
+   * **🪟 On Windows**:
+     * Open `.env` in Notepad and set `ENABLE_LOCAL_TLS=1`.
+     * **If Service Mode**: Open cmd as Administrator and run `net stop JioFiberB2BUA && net start JioFiberB2BUA` (or restart the service in `services.msc`).
+     * **If Console Mode**: Close `b2bua_msvc.exe` and re-run `run_windows.bat`.
+
 2. **Automatic Certificate Handling**:
    * If you don't have certificates yet, **`b2bua` automatically detects missing certs and generates a brand new 10-year pair on startup** on the fly!
-   * Or manually generate them anytime: `./generate_certs.sh` (Linux) or `generate_certs.bat` (Windows).
-3. **Configure Softphone**:
-   * In Linphone, set Server to `<your-pc-ip>:5062`, Transport to **TLS**, and import `JioFiberB2BUA.pem` as the Root CA.
+   * Or manually generate them anytime:
+     * **Linux**: `./generate_certs.sh`
+     * **Windows**: Double-click `generate_certs.bat`
+
+3. **Configure Softphone for TLS (Port 5062)**:
+   * **Linphone (Mobile / Desktop)**: Set Server to `<your-pc-ip>:5062`, Transport to **TLS**, and select `JioFiberB2BUA.pem` as the Root CA Certificate.
+   * **MicroSIP (Windows)**: In Settings ➔ Network ➔ Check **TLS**, set Server to `<your-pc-ip>:5062`, and select `JioFiberB2BUA.pem` as the CA certificate.
+   * **Windows Trust (Optional)**: Double-click `install_ca_cert.bat` to trust the certificate system-wide for all Windows apps and browsers.
 
 ---
 
