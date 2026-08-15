@@ -217,20 +217,20 @@ If you multi-boot (**Windows 11 / Windows 10 / Ubuntu / Debian / Arch**) on the 
 
 > **TLS / Linphone Note**: When using **TLS** transport on port `5062`, Linphone displays **Secured 🔒** once `cert.pem` is imported into Linphone or your phone's Trust Store.
 >
-> **Tailscale users**: Use your Tailscale IP (e.g. `100.x.x.x:5061` or `100.x.x.x:5062`) as the SIP server in your softphone. The B2BUA automatically detects and uses the correct Tailscale interface.
+> **Tailscale users**: Use your Tailscale IP (e.g. `100.x.x.x:5061`) as the SIP server in your softphone. The B2BUA automatically detects and uses the correct Tailscale interface.
 
 ```
-Softphone (SIP/UDP or SIP/TLS)
-  ↕  UDP port 5061 / TLS port 5062
+Softphone (SIP/UDP or TCP)
+  ↕  UDP / TCP port 5061
 [B2BUA]  ←── .env credentials
-  ↕  TLS port 5068
+  ↕  TLS port 5068 (Carrier Encrypted)
 Jio IMS / ONT (192.168.29.1)
   ↕
 PSTN / Phone Numbers
 ```
 
 The B2BUA acts as a full SIP proxy:
-- Listens on UDP `5061` and TLS `5062` for local softphones
+- Listens on UDP & TCP `5061` for local softphones (Linphone, Sipnetic, MicroSIP)
 - Registers upstream with Jio IMS over TLS `5068`
 - Bridges all call legs transparently with native **AMR-WB (16 kHz HD Voice)** and **G.711 PCMA/PCMU** audio
 - Rewrites `Contact` and `SDP` headers per-call to match the correct network interface
@@ -246,7 +246,7 @@ You can use any Samsung Galaxy smartphone (One UI / Android) or other Android de
    * **Linux**: `./send_to_phone.sh`
    * **Windows**: Double-click `send_to_phone.bat`
 2. Open your Samsung Camera and scan the QR code printed in the terminal (or open `http://<your-pc-ip>:8000` in Samsung Internet / Chrome).
-3. Tap the 1-click download buttons to automatically download credentials, certificates, or 1-tap configuration profiles.
+3. Tap the 1-click download buttons to automatically download credentials, scripts, or apps.
 
 ---
 
@@ -256,7 +256,7 @@ You can use any Samsung Galaxy smartphone (One UI / Android) or other Android de
    * **Username**: `100` (or any number e.g. `101`)
    * **SIP Domain**: `<your-pc-ip>:5061` (e.g. `192.168.29.4:5061` or Tailscale IP `100.x.x.x:5061`)
    * **Password**: `1234` (or any password)
-   * **Transport**: Select **UDP** (or **TLS** if using port `5062`)
+   * **Transport**: Select **UDP**
 3. Tap **Log In** ➔ The status indicator at top left will turn **Green (Connected)**.
 4. **Enable HD Voice Codecs**:
    * Go to **Settings ⚙️** ➔ **Audio** ➔ **Codecs**:
