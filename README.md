@@ -49,18 +49,17 @@ Compared to earlier Python/Asterisk/Docker implementations (such as `jiofiber-si
 
 ### 1. Download a pre-built binary / 1-Click Installer
 
-Go to [Releases](https://github.com/sidhantjohnaind/sipserver/releases/tag/v1.1.0) and download the 1-click installer or standalone binary for your target platform:
+Go to [Releases](https://github.com/sidhantjohnaind/sipserver/releases/tag/v1.2.0) and download the 1-click installer or standalone binary for your target platform:
 
 | Platform | Download Link | Package Name | Type / Notes |
 |---|---|---|---|
-| **Windows x64 64-bit (1-Click Installer)** | [🚀 **Download 64-bit Setup (`JioFiber_B2BUA_Setup_x64.exe`)**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.1.0/JioFiber_B2BUA_Setup_x64.exe) | `JioFiber_B2BUA_Setup_x64.exe` (2.3 MB) | ⚡ **1-Click 64-bit Windows Installer** (Auto-configures Firewall, Service & Shortcuts) |
-| **Windows x86 32-bit (1-Click Installer)** | [🚀 **Download 32-bit Setup (`JioFiber_B2BUA_Setup_x86.exe`)**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.1.0/JioFiber_B2BUA_Setup_x86.exe) | `JioFiber_B2BUA_Setup_x86.exe` (2.1 MB) | ⚡ **1-Click 32-bit Windows Installer** (Compatible with legacy 32-bit Windows systems) |
-| **Windows Portable** | [📥 Download `b2bua_msvc.exe`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.1.0/b2bua_msvc.exe) | `b2bua_msvc.exe` (6.2 MB) | ✅ Zero-dependency standalone binary (Dual SCM + Console) |
-| **Linux 1-Click Script (x86_64 / ARM64)** | [🐧 **Download `install_linux.sh`**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.1.0/install_linux.sh) | `install_linux.sh` (2.5 KB) | ⚡ **1-Click Linux Installer** (Auto-detects Arch, Firewall, Service) |
-| **Linux x86_64 (AppImage)** | [🐧 **Download `JioFiber_B2BUA-x86_64.AppImage`**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.1.0/JioFiber_B2BUA-x86_64.AppImage) | `JioFiber_B2BUA-x86_64.AppImage` (816 KB) | ⚡ **1-Click Portable Linux AppImage** |
-| **Linux x86_64 Standalone** | [📥 Download `b2bua-linux-amd64`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.1.0/b2bua) | `b2bua` (1.9 MB) | ✅ Pre-built Linux AMD64 binary |
-| **Linux ARM64 Standalone** | [📥 Download `b2bua-linux-arm64`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.1.0/b2bua-linux-arm64) | `b2bua-linux-arm64` (1.9 MB) | ✅ Pre-built for Raspberry Pi / ARM64 Routers |
-| **Linux RISC-V 64 Standalone** | [📥 Download `b2bua-linux-riscv64`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.1.0/b2bua-linux-riscv64) | `b2bua-linux-riscv64` (1.6 MB) | ✅ Pre-built for RISC-V 64 SBCs / Routers |
+| **Windows x64 64-bit (1-Click Installer)** | [🚀 **Download 64-bit Setup (`JioFiber_B2BUA_Setup_x64.exe`)**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.2.0/JioFiber_B2BUA_Setup_x64.exe) | `JioFiber_B2BUA_Setup_x64.exe` (2.3 MB) | ⚡ **1-Click 64-bit Windows Installer** (Auto-configures Firewall, Service & Shortcuts) |
+| **Windows x86 32-bit (1-Click Installer)** | [🚀 **Download 32-bit Setup (`JioFiber_B2BUA_Setup_x86.exe`)**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.2.0/JioFiber_B2BUA_Setup_x86.exe) | `JioFiber_B2BUA_Setup_x86.exe` (2.1 MB) | ⚡ **1-Click 32-bit Windows Installer** (Compatible with legacy 32-bit Windows systems) |
+| **Windows Portable** | [📥 Download `b2bua_msvc.exe`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.2.0/b2bua_msvc.exe) | `b2bua_msvc.exe` (6.2 MB) | ✅ Zero-dependency standalone binary (Dual SCM + Console) |
+| **Linux 1-Click Script (x86_64 / ARM64)** | [🐧 **Download `install_linux.sh`**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.2.0/install_linux.sh) | `install_linux.sh` (4.1 KB) | ⚡ **1-Click Linux Installer** (Auto-detects Arch, Firewall, Service) |
+| **Linux x86_64 (AppImage)** | [🐧 **Download `JioFiber_B2BUA-x86_64.AppImage`**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.2.0/JioFiber_B2BUA-x86_64.AppImage) | `JioFiber_B2BUA-x86_64.AppImage` (1.8 MB) | ⚡ **1-Click Portable Linux AppImage** |
+| **Linux x86_64 Standalone** | [📥 Download `b2bua-linux-amd64`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.2.0/b2bua-linux-amd64) | `b2bua-linux-amd64` (2.1 MB) | ✅ Pre-built Linux AMD64 binary with AMR-WB / AMR |
+| **Linux ARM64 Standalone** | [📥 Download `b2bua-linux-arm64`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.2.0/b2bua-linux-arm64) | `b2bua-linux-arm64` (2.5 MB) | ✅ Pre-built for Raspberry Pi / ARM64 Routers / SBCs |
 
 > **Windows on ARM (Snapdragon X Elite / Surface Pro ARM / Windows 11 ARM64)**:
 > Windows 11 ARM64 includes Microsoft's **Prism x64 emulation engine** — the standard `b2bua_msvc.exe` (x64) runs on all Windows ARM devices with near-native speed and **zero configuration needed**. A native ARM64 build script ([`src/build_win_arm64.py`](src/build_win_arm64.py)) is also provided if you have the MSVC ARM64 cross-compile toolchain installed.
@@ -212,9 +211,9 @@ If you multi-boot (**Windows 11 / Windows 10 / Ubuntu / Debian / Arch**) on the 
 | Setting | Value |
 |---|---|
 | SIP Server / Domain | `<your-pc-ip>:5061` (UDP) or `<your-pc-ip>:5062` (TLS) |
-| Transport | UDP or TLS |
-| Username | any (e.g. `101`) |
-| Password | any |
+| Transport | UDP (Default) or TLS |
+| Username | any (e.g. `100` or `101`) |
+| Password | any (e.g. `1234`) |
 
 > **TLS / Linphone Note**: When using **TLS** transport on port `5062`, Linphone displays **Secured 🔒** once `cert.pem` is imported into Linphone or your phone's Trust Store.
 >
@@ -233,8 +232,58 @@ PSTN / Phone Numbers
 The B2BUA acts as a full SIP proxy:
 - Listens on UDP `5061` and TLS `5062` for local softphones
 - Registers upstream with Jio IMS over TLS `5068`
-- Bridges all call legs transparently
+- Bridges all call legs transparently with native **AMR-WB (16 kHz HD Voice)** and **G.711 PCMA/PCMU** audio
 - Rewrites `Contact` and `SDP` headers per-call to match the correct network interface
+
+---
+
+### 📱 Samsung Galaxy & Android Mobile Phone Setup
+
+You can use any Samsung Galaxy smartphone (One UI / Android) or other Android device to make and receive landline calls through your JioFiber connection with crystal-clear VoLTE / HD Voice.
+
+#### ⚡ Method A: 1-Tap QR Code Setup (Fastest)
+1. Run the local delivery server on your PC:
+   * **Linux**: `./send_to_phone.sh`
+   * **Windows**: Double-click `send_to_phone.bat`
+2. Open your Samsung Camera and scan the QR code printed in the terminal (or open `http://<your-pc-ip>:8000` in Samsung Internet / Chrome).
+3. Tap the 1-click download buttons to automatically download credentials, certificates, or 1-tap configuration profiles.
+
+---
+
+#### 📞 Option 1: Linphone for Samsung Galaxy (Recommended)
+1. Install **Linphone** from the [Google Play Store](https://play.google.com/store/apps/details?id=org.linphone) or F-Droid.
+2. Launch Linphone ➔ Tap **Use SIP Account**:
+   * **Username**: `100` (or any number e.g. `101`)
+   * **SIP Domain**: `<your-pc-ip>:5061` (e.g. `192.168.29.4:5061` or Tailscale IP `100.x.x.x:5061`)
+   * **Password**: `1234` (or any password)
+   * **Transport**: Select **UDP** (or **TLS** if using port `5062`)
+3. Tap **Log In** ➔ The status indicator at top left will turn **Green (Connected)**.
+4. **Enable HD Voice Codecs**:
+   * Go to **Settings ⚙️** ➔ **Audio** ➔ **Codecs**:
+   * Ensure **AMR-WB (16kHz)**, **AMR (8kHz)**, and **PCMA** are enabled for high-fidelity audio.
+5. **Samsung One UI Background Permission (Critical for Incoming Calls)**:
+   * On Samsung phones, prevent One UI from killing the app in sleep:
+   * Open Android **Settings** ➔ **Apps** ➔ **Linphone** ➔ **Battery** ➔ Select **Unrestricted**.
+   * In Linphone ➔ **Settings ⚙️** ➔ **Advanced** ➔ Enable **Background Mode** and **Start at Boot Time**.
+
+---
+
+#### 🎙️ Option 2: Sipnetic for Android (Advanced VoLTE & IMS Client)
+1. Install **Sipnetic** from the [Google Play Store](https://play.google.com/store/apps/details?id=com.sipnetic.app).
+2. Add a new SIP account:
+   * **Account Name**: `JioFiber Landline`
+   * **Server**: `<your-pc-ip>:5061`
+   * **Username**: `100`
+   * **Password**: `1234`
+   * **Transport**: `UDP` or `TCP`
+3. Sipnetic automatically negotiates **AMR-WB 16 kHz HD Voice** with the B2BUA.
+
+---
+
+#### 📱 Native Android / Samsung Dialer Integration
+1. Open Samsung **Phone / Dialer App** ➔ Tap three dots menu (`⋮`) ➔ **Settings** ➔ **Calling Accounts** (or **Other call settings**).
+2. Enable your softphone (Linphone / Sipnetic) as an authorized calling account.
+3. You can now place calls through your JioFiber landline directly from your Samsung Contacts or dialer keypad! Dial standard 10-digit mobile numbers (e.g. `9876543210`), national numbers (`01234567890`), or international format (`+919876543210`).
 
 ---
 
