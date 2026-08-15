@@ -31,7 +31,6 @@ for %%D in (C D E F G H I J K L M N O P Q R S T U V W X Y Z) do (
             "%%D:\sipserver\bin\windows-x64"
             "%%D:\sipserver"
             "%%D:\Users\%USERNAME%\sipserver"
-            "%%D:\Users\%USERNAME%\Desktop\JioFiber_TLS_Certs"
         ) do (
             if exist "%%~P" (
                 if /i not "%%~P"=="%SOURCE_DIR:~0,-1%" if /i not "%%~P\"=="%SOURCE_DIR%" (

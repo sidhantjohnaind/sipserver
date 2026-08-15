@@ -42,8 +42,7 @@ for mount_root in /mnt/* /media/*/* /run/media/*/*; do
         "Programming/sipserver/bin/windows-x64" \
         "sipserver/bin/windows-x64" \
         "sipserver" \
-        "Users"/*"/sipserver" \
-        "Users"/*"/Desktop/JioFiber_TLS_Certs"; do
+        "Users"/*"/sipserver"; do
         
         for target in "$mount_root"/$sub; do
             if [ -d "$target" ]; then
