@@ -525,6 +525,21 @@ static HttpResponse http_get_request(const std::string &host, uint16_t port, con
 #endif
 
 static bool run_cpp_otp_provisioner() {
+#ifdef _WIN32
+    HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD mode;
+    bool is_interactive = (hIn != INVALID_HANDLE_VALUE && GetConsoleMode(hIn, &mode));
+#else
+    bool is_interactive = (isatty(fileno(stdin)) != 0);
+#endif
+
+    if (!is_interactive) {
+        std::cerr << "\n[b2bua] Background Daemon Mode: Stdin is non-interactive.\n";
+        std::cerr << "[b2bua] Cannot prompt for OTP automatically in background service.\n";
+        std::cerr << "[b2bua] Run 'b2bua' interactively in terminal to provision credentials if needed.\n\n";
+        return false;
+    }
+
     std::cout << "\n===================================================\n";
     std::cout << "[b2bua] Native Cross-Platform C++ Standalone OTP Provisioner\n";
     std::cout << "===================================================\n\n";
@@ -1185,23 +1200,47 @@ static void on_reg_state(pjsua_acc_id acc_id) {
         g_consecutive_503_count = 0;
         std::cout << "\n===================================================\n";
         std::cout << "[b2bua] ERROR 403: Device Not Whitelisted / Credentials Expired.\n";
-        std::cout << "[b2bua] Triggering OTP re-authentication flow...\n";
-        std::cout << "===================================================\n\n";
-        trigger_otp_flow();
-        load_env_file(".env");
-        pjsua_acc_set_registration(acc_id, PJ_TRUE);
+#ifndef _WIN32
+        bool is_interactive = (isatty(fileno(stdin)) != 0);
+#else
+        HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
+        DWORD mode;
+        bool is_interactive = (hIn != INVALID_HANDLE_VALUE && GetConsoleMode(hIn, &mode));
+#endif
+        if (is_interactive) {
+            std::cout << "[b2bua] Triggering OTP re-authentication flow...\n";
+            std::cout << "===================================================\n\n";
+            trigger_otp_flow();
+            load_env_file(".env");
+            pjsua_acc_set_registration(acc_id, PJ_TRUE);
+        } else {
+            std::cout << "[b2bua] Background Service: Please verify .env or run 'b2bua' manually in a terminal to authenticate OTP.\n";
+            std::cout << "===================================================\n\n";
+        }
     } else if (g_acc_info_buf.status == 503 || g_acc_info_buf.status == 500) {
         g_consecutive_503_count++;
         std::cout << "\n===================================================\n";
         std::cout << "[b2bua] WARNING " << g_acc_info_buf.status << ": Connection Refused / Service Unavailable by Jio Router (attempt " 
                   << g_consecutive_503_count << ").\n";
         if (g_consecutive_503_count >= 2) {
-            std::cout << "[b2bua] Router port 5068 is refusing connection. Re-triggering OTP whitelisting flow...\n";
-            std::cout << "===================================================\n\n";
-            g_consecutive_503_count = 0;
-            trigger_otp_flow();
-            load_env_file(".env");
-            pjsua_acc_set_registration(acc_id, PJ_TRUE);
+#ifndef _WIN32
+            bool is_interactive = (isatty(fileno(stdin)) != 0);
+#else
+            HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
+            DWORD mode;
+            bool is_interactive = (hIn != INVALID_HANDLE_VALUE && GetConsoleMode(hIn, &mode));
+#endif
+            if (is_interactive) {
+                std::cout << "[b2bua] Router port 5068 is refusing connection. Re-triggering OTP whitelisting flow...\n";
+                std::cout << "===================================================\n\n";
+                trigger_otp_flow();
+                load_env_file(".env");
+                pjsua_acc_set_registration(acc_id, PJ_TRUE);
+                g_consecutive_503_count = 0;
+            } else {
+                std::cout << "[b2bua] Router port 5068 unavailable. Will retry connection in background.\n";
+                std::cout << "===================================================\n\n";
+            }
         } else {
             std::cout << "[b2bua] Will retry connection shortly. If persistent, check router IP or run OTP provisioner.\n";
             std::cout << "===================================================\n\n";
