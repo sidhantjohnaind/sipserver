@@ -62,16 +62,6 @@ NTFS_DIR="${WIN_DIRS[0]:-$SCRIPT_DIR/bin/windows-x64}"
 # Files to sync
 SYNC_FILES=(
     ".env"
-    "JioFiberB2BUA.pem"
-    "JioFiberB2BUA.key"
-    "JioFiberB2BUA.crt"
-    "JioFiberB2BUA.p12"
-    "JioFiberB2BUA.pfx"
-    "cert.pem"
-    "key.pem"
-    "cert.crt"
-    "cert.p12"
-    "cert.pfx"
 )
 
 # ---- Colors ---------------------------------------------------------
