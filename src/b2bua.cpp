@@ -1406,9 +1406,8 @@ static int run_b2bua_server() {
         pjsua_transport_config_default(&loc_tls_cfg);
         int local_tls_port = std::stoi(get_env_def("LOCAL_TLS_PORT", "5062"));
         loc_tls_cfg.port = local_tls_port;
-#if defined(PJSIP_TLSV1_2_METHOD)
-        loc_tls_cfg.tls_setting.method = PJSIP_TLSV1_2_METHOD;
-#endif
+        loc_tls_cfg.tls_setting.proto = 0;
+        loc_tls_cfg.tls_setting.method = PJSIP_SSL_UNSPECIFIED_METHOD;
 
         std::string tls_cert = get_env_def("TLS_CERT_FILE", "cert.pem");
         std::string tls_key  = get_env_def("TLS_KEY_FILE", "key.pem");
@@ -1427,8 +1426,13 @@ static int run_b2bua_server() {
             std::cout << "[b2bua] -> Copy '" << tls_cert << "' to your phone to install manually into Linphone / Phone CA Store." << std::endl;
         }
 
+        loc_tls_cfg.tls_setting.ca_list_file.slen = 0;
+        loc_tls_cfg.tls_setting.ca_list_file.ptr = NULL;
+        loc_tls_cfg.tls_setting.ca_list_path.slen = 0;
+        loc_tls_cfg.tls_setting.ca_list_path.ptr = NULL;
         loc_tls_cfg.tls_setting.verify_server = PJ_FALSE;
         loc_tls_cfg.tls_setting.verify_client = PJ_FALSE;
+        loc_tls_cfg.tls_setting.require_client_cert = PJ_FALSE;
 
         pj_status_t loc_tls_status = pjsua_transport_create(PJSIP_TRANSPORT_TLS, &loc_tls_cfg, &g_loc_tls_tid);
         if (loc_tls_status != PJ_SUCCESS) {
