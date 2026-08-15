@@ -156,175 +156,7 @@ static bool file_exists(const std::string &filename) {
     return f.good();
 }
 
-static bool add_x509_ext(X509 *cert, int nid, const char *value) {
-    X509_EXTENSION *ex = NULL;
-    X509V3_CTX ctx;
-    X509V3_set_ctx_nodb(&ctx);
-    X509V3_set_ctx(&ctx, cert, cert, NULL, NULL, 0);
-    ex = X509V3_EXT_conf_nid(NULL, &ctx, nid, (char*)value);
-    if (!ex) return false;
-    X509_add_ext(cert, ex, -1);
-    X509_EXTENSION_free(ex);
-    return true;
-}
 
-static bool generate_self_signed_cert(const std::string &cert_path, const std::string &key_path) {
-    /* Named output files: LocalLAN_RootCA.pem, LocalLAN_RootCA.key, LocalLAN_RootCA.p12 */
-    std::string named_cert = "LocalLAN_RootCA.pem";
-    std::string named_key  = "LocalLAN_RootCA.key";
-    std::string named_crt  = "LocalLAN_RootCA.crt";
-    std::string named_p12  = "LocalLAN_RootCA.p12";
-    std::string named_pfx  = "LocalLAN_RootCA.pfx";
-
-    EVP_PKEY *pkey = EVP_PKEY_new();
-    if (!pkey) return false;
-
-    RSA *rsa = RSA_generate_key(2048, RSA_F4, NULL, NULL);
-    if (!rsa) { EVP_PKEY_free(pkey); return false; }
-    EVP_PKEY_assign_RSA(pkey, rsa);
-
-    X509 *x509 = X509_new();
-    if (!x509) { EVP_PKEY_free(pkey); return false; }
-
-    X509_set_version(x509, 2); /* X.509 v3 */
-    ASN1_INTEGER_set(X509_get_serialNumber(x509), 1);
-    X509_gmtime_adj(X509_get_notBefore(x509), 0);
-    X509_gmtime_adj(X509_get_notAfter(x509), 315360000L); /* 10 Years */
-
-    X509_set_pubkey(x509, pkey);
-
-    std::string lan_ip = get_env_def("IPV4_ADDRESS", "192.168.29.4");
-    std::string cn_name = "LocalLAN_RootCA";  /* Universal LAN Root CA */
-
-    X509_NAME *name = (X509_NAME*)X509_get_subject_name(x509);
-    X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, (const unsigned char*)"IN", -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, (const unsigned char*)"LocalLAN", -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (const unsigned char*)cn_name.c_str(), -1, -1, 0);
-
-    X509_set_issuer_name(x509, name);
-
-    add_x509_ext(x509, NID_basic_constraints, "critical,CA:TRUE");
-    add_x509_ext(x509, NID_key_usage, "critical,digitalSignature,keyCertSign,cRLSign,keyEncipherment");
-    add_x509_ext(x509, NID_ext_key_usage, "serverAuth,clientAuth");
-    /* Broad SAN coverage - works on any home LAN without regenerating the cert */
-    std::string san_str =
-        /* Detected LAN IP + loopback */
-        "IP:" + lan_ip + ","
-        "IP:127.0.0.1,"
-        /* Common JioFiber 192.168.29.x range */
-        "IP:192.168.29.1,IP:192.168.29.2,IP:192.168.29.3,"
-        "IP:192.168.29.4,IP:192.168.29.5,IP:192.168.29.10,"
-        "IP:192.168.29.100,IP:192.168.29.101,IP:192.168.29.102,"
-        /* Common home router ranges */
-        "IP:192.168.1.1,IP:192.168.1.2,IP:192.168.1.100,"
-        "IP:192.168.0.1,IP:192.168.0.100,"
-        "IP:192.168.31.1,IP:192.168.31.100,"
-        "IP:10.0.0.1,IP:10.0.0.2,IP:10.0.0.100,IP:10.8.0.1,"
-        /* DNS names - always valid regardless of IP / VPN */
-        "DNS:LocalLAN_RootCA,"
-        "DNS:locallan-rootca,"
-        "DNS:JioFiberB2BUA,"
-        "DNS:jiofiber-b2bua,"
-        "DNS:localhost,"
-        "DNS:br.wln.ims.jio.com,"
-        "DNS:*.ts.net,"
-        "DNS:*.local,"
-        "DNS:" + lan_ip;
-    add_x509_ext(x509, NID_subject_alt_name, san_str.c_str());
-
-    X509_sign(x509, pkey, EVP_sha256());
-
-    /* 1. Write Private Key - named JioFiberB2BUA.key + legacy key.pem */
-    BIO *bio_key = BIO_new_file(named_key.c_str(), "w");
-    if (bio_key) {
-        PEM_write_bio_PrivateKey(bio_key, pkey, NULL, NULL, 0, NULL, NULL);
-        BIO_free(bio_key);
-    }
-    /* Legacy key.pem (for backwards compat with TLS_KEY_FILE default) */
-    BIO *bio_key2 = BIO_new_file(key_path.c_str(), "w");
-    if (bio_key2) {
-        PEM_write_bio_PrivateKey(bio_key2, pkey, NULL, NULL, 0, NULL, NULL);
-        BIO_free(bio_key2);
-    }
-
-    /* 2. Write Public Certificate - named JioFiberB2BUA.pem + legacy cert.pem */
-    BIO *bio_cert = BIO_new_file(named_cert.c_str(), "w");
-    if (bio_cert) {
-        PEM_write_bio_X509(bio_cert, x509);
-        BIO_free(bio_cert);
-    }
-    BIO *bio_cert2 = BIO_new_file(cert_path.c_str(), "w");
-    if (bio_cert2) {
-        PEM_write_bio_X509(bio_cert2, x509);
-        BIO_free(bio_cert2);
-    }
-
-    /* 3. Write CRT alias - named JioFiberB2BUA.crt + legacy cert.crt */
-    BIO *bio_crt = BIO_new_file(named_crt.c_str(), "w");
-    if (bio_crt) {
-        PEM_write_bio_X509(bio_crt, x509);
-        BIO_free(bio_crt);
-    }
-    BIO *bio_crt2 = BIO_new_file("cert.crt", "w");
-    if (bio_crt2) {
-        PEM_write_bio_X509(bio_crt2, x509);
-        BIO_free(bio_crt2);
-    }
-
-    /* 4. Write PKCS#12 bundle - named JioFiberB2BUA.p12 + legacy cert.p12 */
-    PKCS12 *p12 = PKCS12_create(
-        (char*)"1234",
-        (char*)"JioFiber B2BUA",   /* Friendly Name shown in Android/iOS */
-        pkey,
-        x509,
-        NULL,
-        NID_pbe_WithSHA1And3_Key_TripleDES_CBC,
-        NID_pbe_WithSHA1And3_Key_TripleDES_CBC,
-        2048,
-        1,
-        0
-    );
-    if (p12) {
-        BIO *bio_p12 = BIO_new_file(named_p12.c_str(), "wb");
-        if (bio_p12) { i2d_PKCS12_bio(bio_p12, p12); BIO_free(bio_p12); }
-        BIO *bio_pfx = BIO_new_file(named_pfx.c_str(), "wb");
-        if (bio_pfx) { i2d_PKCS12_bio(bio_pfx, p12); BIO_free(bio_pfx); }
-        /* Legacy cert.p12 / cert.pfx */
-        BIO *bio_p12b = BIO_new_file("cert.p12", "wb");
-        if (bio_p12b) { i2d_PKCS12_bio(bio_p12b, p12); BIO_free(bio_p12b); }
-        BIO *bio_pfxb = BIO_new_file("cert.pfx", "wb");
-        if (bio_pfxb) { i2d_PKCS12_bio(bio_pfxb, p12); BIO_free(bio_pfxb); }
-        PKCS12_free(p12);
-    }
-
-    /* 5. Synchronize all named + legacy files into certs/ directory */
-#ifdef _WIN32
-    CreateDirectoryA("certs", NULL);
-    CopyFileA(named_cert.c_str(), "certs\\JioFiberB2BUA.pem", FALSE);
-    CopyFileA(named_key.c_str(),  "certs\\JioFiberB2BUA.key", FALSE);
-    CopyFileA(named_crt.c_str(),  "certs\\JioFiberB2BUA.crt", FALSE);
-    CopyFileA(named_p12.c_str(),  "certs\\JioFiberB2BUA.p12", FALSE);
-    CopyFileA(named_pfx.c_str(),  "certs\\JioFiberB2BUA.pfx", FALSE);
-    CopyFileA(cert_path.c_str(),  "certs\\cert.pem", FALSE);
-    CopyFileA(key_path.c_str(),   "certs\\key.pem", FALSE);
-    CopyFileA("cert.crt", "certs\\cert.crt", FALSE);
-    CopyFileA("cert.p12", "certs\\cert.p12", FALSE);
-    CopyFileA("cert.pfx", "certs\\cert.pfx", FALSE);
-#else
-    mkdir("certs", 0755);
-    system("cp JioFiberB2BUA.pem JioFiberB2BUA.key JioFiberB2BUA.crt JioFiberB2BUA.p12 JioFiberB2BUA.pfx cert.pem key.pem cert.crt cert.p12 cert.pfx certs/ 2>/dev/null");
-    system("mkdir -p ~/Desktop/JioFiber_TLS_Certs && cp certs/* ~/Desktop/JioFiber_TLS_Certs/ 2>/dev/null");
-#endif
-
-    X509_free(x509);
-    EVP_PKEY_free(pkey);
-    std::cout << "[b2bua] Generated X.509v3 TLS certificates & Android PKCS#12 bundle in pure C++!\n";
-    std::cout << "[b2bua] -> JioFiberB2BUA.pem  (install as Root CA in Linphone / phone trust store)\n";
-    std::cout << "[b2bua] -> JioFiberB2BUA.p12  (Password: '1234', friendly name: 'JioFiber B2BUA')\n";
-    std::cout << "[b2bua] -> JioFiberB2BUA.key  (private key for b2bua server)\n";
-    std::cout << "[b2bua] -> Legacy aliases: cert.pem, key.pem, cert.p12 also written.\n";
-    return true;
-}
 
 /* ------------------------------------------------------------------ */
 /* Cross-Platform HTTP/HTTPS Provisioner Engine                       */
@@ -617,33 +449,7 @@ static bool run_cpp_otp_provisioner() {
         return false;
     }
 
-    std::cout << "\n[b2bua] OTP Verified Successfully!\n";
-    std::cout << "[b2bua] Prompt for Local TLS Certificate Setup:\n";
-    std::cout << "  Option 1: Generate a brand new TLS certificate pair (cert.pem & key.pem).\n";
-    std::cout << "  Option 2: Keep & use existing cert.pem from disk.\n";
-    std::cout << "  Option 3 [Default]: Disable Local TLS (UDP port 5061 only mode).\n";
-    std::cout << "Select option [1, 2, or 3, default: 3]: ";
-    std::cout.flush();
-
-    std::string cert_choice;
-    if (std::cin.peek() == '\n') std::cin.get();
-    std::getline(std::cin, cert_choice);
-    cert_choice = trim(cert_choice);
-
-    std::string gen_new_flag = "0";
-    std::string enable_tls_flag = "0";
-
-    if (cert_choice == "1") {
-        enable_tls_flag = "1";
-        gen_new_flag = "1";
-    } else if (cert_choice == "2") {
-        enable_tls_flag = "1";
-        gen_new_flag = "0";
-    } else {
-        // Option 3 [Default: Disable Local TLS, pure UDP port 5061 only mode]
-        enable_tls_flag = "0";
-        gen_new_flag = "0";
-    }
+    std::cout << "\n[b2bua] OTP Verified Successfully! Saving configuration to .env...\n";
 
     std::string default_ip = "192.168.29.4";
     std::ofstream env_out(".env");
@@ -655,9 +461,6 @@ static bool run_cpp_otp_provisioner() {
     env_out << "USER_AGENT=JSEAndrd-1.0\n";
     env_out << "IPV4_ADDRESS=" << default_ip << "\n";
     env_out << "LOCAL_PORT=5061\n";
-    env_out << "LOCAL_TLS_PORT=5062\n";
-    env_out << "ENABLE_LOCAL_TLS=" << enable_tls_flag << "\n";
-    env_out << "GENERATE_NEW_TLS_CERT=" << gen_new_flag << "\n";
     env_out << "TLS_PORT=5068\n";
     env_out << "RTP_PORT=52000\n";
     env_out << "PUBLIC_ID=" << public_id << "\n";
@@ -1399,52 +1202,7 @@ static int run_b2bua_server() {
     tcp_cfg.port = local_port;
     pjsua_transport_create(PJSIP_TRANSPORT_TCP, &tcp_cfg, &g_loc_tcp_tid);
 
-    /* Local TLS Transport (For local softphones on port 5062) */
-    std::string enable_loc_tls = get_env_def("ENABLE_LOCAL_TLS", "0");
-    if (enable_loc_tls != "0" && enable_loc_tls != "false" && enable_loc_tls != "off") {
-        pjsua_transport_config loc_tls_cfg;
-        pjsua_transport_config_default(&loc_tls_cfg);
-        int local_tls_port = std::stoi(get_env_def("LOCAL_TLS_PORT", "5062"));
-        loc_tls_cfg.port = local_tls_port;
-        loc_tls_cfg.tls_setting.proto = 0;
-        loc_tls_cfg.tls_setting.method = PJSIP_SSL_UNSPECIFIED_METHOD;
 
-        std::string tls_cert = get_env_def("TLS_CERT_FILE", "cert.pem");
-        std::string tls_key  = get_env_def("TLS_KEY_FILE", "key.pem");
-        std::string force_gen = get_env_def("GENERATE_NEW_TLS_CERT", "0");
-
-        if (force_gen == "1" || force_gen == "true" || !file_exists(tls_cert) || !file_exists(tls_key)) {
-            std::cout << "[b2bua] Generating new TLS certificate pair..." << std::endl;
-            generate_self_signed_cert(tls_cert, tls_key);
-        } else {
-            std::cout << "[b2bua] Using existing TLS certificate from disk: " << tls_cert << std::endl;
-        }
-
-        if (file_exists(tls_cert) && file_exists(tls_key)) {
-            loc_tls_cfg.tls_setting.cert_file = pj_str((char*)tls_cert.c_str());
-            loc_tls_cfg.tls_setting.privkey_file = pj_str((char*)tls_key.c_str());
-            std::cout << "[b2bua] -> Copy '" << tls_cert << "' to your phone to install manually into Linphone / Phone CA Store." << std::endl;
-        }
-
-        loc_tls_cfg.tls_setting.ca_list_file.slen = 0;
-        loc_tls_cfg.tls_setting.ca_list_file.ptr = NULL;
-        loc_tls_cfg.tls_setting.ca_list_path.slen = 0;
-        loc_tls_cfg.tls_setting.ca_list_path.ptr = NULL;
-        loc_tls_cfg.tls_setting.verify_server = PJ_FALSE;
-        loc_tls_cfg.tls_setting.verify_client = PJ_FALSE;
-        loc_tls_cfg.tls_setting.require_client_cert = PJ_FALSE;
-
-        pj_status_t loc_tls_status = pjsua_transport_create(PJSIP_TRANSPORT_TLS, &loc_tls_cfg, &g_loc_tls_tid);
-        if (loc_tls_status != PJ_SUCCESS) {
-            std::cout << "[b2bua] ERROR: Failed to bind to Local TLS port " << local_tls_port << " (port already in use). Exiting." << std::endl;
-            PJ_LOG(1, (THIS_FILE, "Error creating Local SIP TLS transport on port %d", local_tls_port));
-            pjsua_destroy();
-            return 1;
-        }
-        std::cout << "[b2bua] Enabled Local TLS listener on port " << local_tls_port << std::endl;
-    } else {
-        std::cout << "[b2bua] Local TLS listener disabled (UDP port 5061 only)" << std::endl;
-    }
 
     /* TLS Transport (Jio Router Upstream) */
     pjsua_transport_config tls_cfg;
@@ -1631,17 +1389,6 @@ int main(int argc, char *argv[]) {
         }
     }
 #endif
-
-    for (int i = 1; i < argc; ++i) {
-        std::string arg = argv[i];
-        if (arg == "--gen-cert" || arg == "--gen-certs" || arg == "-g") {
-            std::cout << "[b2bua] Generating fresh TLS certificates & PKCS#12 bundle in pure C++...\n";
-            std::string cert_file = get_env_def("TLS_CERT_FILE", "cert.pem");
-            std::string key_file  = get_env_def("TLS_KEY_FILE", "key.pem");
-            generate_self_signed_cert(cert_file, key_file);
-            return 0;
-        }
-    }
 
     return run_b2bua_server();
 }

@@ -88,9 +88,6 @@ for /l %%i in (1,1,%TARGET_COUNT%) do (
     set "DEST=!TARGET_%%i!"
     echo    -^> Syncing to: !DEST!
     if exist "%SOURCE_DIR%.env" copy /y "%SOURCE_DIR%.env" "!DEST!\.env" >nul
-    if exist "%SOURCE_DIR%JioFiberB2BUA.*" copy /y "%SOURCE_DIR%JioFiberB2BUA.*" "!DEST!\" >nul 2>nul
-    if exist "%SOURCE_DIR%cert.*" copy /y "%SOURCE_DIR%cert.*" "!DEST!\" >nul 2>nul
-    if exist "%SOURCE_DIR%key.*" copy /y "%SOURCE_DIR%key.*" "!DEST!\" >nul 2>nul
 )
 echo.
 echo [SUCCESS] Synchronization complete!
@@ -119,11 +116,8 @@ if not defined PULL_SRC (
 )
 
 echo.
-echo [*] Pulling configuration from %PULL_SRC% -^> %SOURCE_DIR%
+echo [*] Pulling configuration from %PULL_SRC% -> %SOURCE_DIR%
 if exist "%PULL_SRC%\.env" copy /y "%PULL_SRC%\.env" "%SOURCE_DIR%.env" >nul
-if exist "%PULL_SRC%\JioFiberB2BUA.*" copy /y "%PULL_SRC%\JioFiberB2BUA.*" "%SOURCE_DIR%" >nul 2>nul
-if exist "%PULL_SRC%\cert.*" copy /y "%PULL_SRC%\cert.*" "%SOURCE_DIR%" >nul 2>nul
-if exist "%PULL_SRC%\key.*" copy /y "%PULL_SRC%\key.*" "%SOURCE_DIR%" >nul 2>nul
 echo [SUCCESS] Configuration pulled into active directory!
 pause
 exit /b
@@ -132,7 +126,7 @@ exit /b
 echo.
 set "ZIP_OUT=%USERPROFILE%\Desktop\JioFiber_Config_Backup.zip"
 echo [*] Creating portable backup archive: %ZIP_OUT%
-powershell -Command "$files = Get-ChildItem -Path '%SOURCE_DIR%' -Include '.env','JioFiberB2BUA.*','cert.*','key.*' -Recurse | Where-Object { -not $_.PSIsContainer }; Compress-Archive -Path $files.FullName -DestinationPath '%ZIP_OUT%' -Force"
+powershell -Command "$files = Get-ChildItem -Path '%SOURCE_DIR%' -Include '.env' -Recurse | Where-Object { -not $_.PSIsContainer }; Compress-Archive -Path $files.FullName -DestinationPath '%ZIP_OUT%' -Force"
 echo.
 echo [SUCCESS] Exported backup ZIP to Desktop: %ZIP_OUT%
 echo You can copy this ZIP to a USB drive or other computer.
