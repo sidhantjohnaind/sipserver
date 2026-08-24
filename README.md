@@ -275,56 +275,6 @@ In MicroSIP, click **Menu ➔ Settings (⚙️) ➔ Audio**:
 
 ---
 
-### 📱 Samsung Galaxy & Android Mobile Phone Setup
-
-You can use any Samsung Galaxy smartphone (One UI / Android) or other Android device to make and receive landline calls through your JioFiber connection with crystal-clear VoLTE / HD Voice.
-
-#### ⚡ Method A: 1-Tap QR Code Setup (Fastest)
-1. Run the local delivery server on your PC:
-   * **Linux**: `./send_to_phone.sh`
-   * **Windows**: Double-click `send_to_phone.bat`
-2. Open your Samsung Camera and scan the QR code printed in the terminal (or open `http://<your-pc-ip>:8000` in Samsung Internet / Chrome).
-3. Tap the 1-click download buttons to automatically download credentials, scripts, or apps.
-
----
-
-#### 📞 Option 1: Linphone for Samsung Galaxy (Recommended)
-1. Install **Linphone** from the [Google Play Store](https://play.google.com/store/apps/details?id=org.linphone) or F-Droid.
-2. Launch Linphone ➔ Tap **Use SIP Account**:
-   * **Username**: `100` (or any number e.g. `101`)
-   * **SIP Domain**: `<your-pc-ip>:5061` (e.g. `192.168.29.4:5061` or Tailscale IP `100.x.x.x:5061`)
-   * **Password**: `1234` (or any password)
-   * **Transport**: Select **UDP**
-3. Tap **Log In** ➔ The status indicator at top left will turn **Green (Connected)**.
-4. **Enable HD Voice Codecs**:
-   * Go to **Settings ⚙️** ➔ **Audio** ➔ **Codecs**:
-   * Ensure **AMR-WB (16kHz)**, **AMR (8kHz)**, and **PCMA** are enabled for high-fidelity audio.
-5. **Samsung One UI Background Permission (Critical for Incoming Calls)**:
-   * On Samsung phones, prevent One UI from killing the app in sleep:
-   * Open Android **Settings** ➔ **Apps** ➔ **Linphone** ➔ **Battery** ➔ Select **Unrestricted**.
-   * In Linphone ➔ **Settings ⚙️** ➔ **Advanced** ➔ Enable **Background Mode** and **Start at Boot Time**.
-
----
-
-#### 🎙️ Option 2: Sipnetic for Android (Advanced VoLTE & IMS Client)
-1. Install **Sipnetic** from the [Google Play Store](https://play.google.com/store/apps/details?id=com.sipnetic.app).
-2. Add a new SIP account:
-   * **Account Name**: `JioFiber Landline`
-   * **Server**: `<your-pc-ip>:5061`
-   * **Username**: `100`
-   * **Password**: `1234`
-   * **Transport**: `UDP` or `TCP`
-3. Sipnetic automatically negotiates **AMR-WB 16 kHz HD Voice** with the B2BUA.
-
----
-
-#### 📱 Native Android / Samsung Dialer Integration
-1. Open Samsung **Phone / Dialer App** ➔ Tap three dots menu (`⋮`) ➔ **Settings** ➔ **Calling Accounts** (or **Other call settings**).
-2. Enable your softphone (Linphone / Sipnetic) as an authorized calling account.
-3. You can now place calls through your JioFiber landline directly from your Samsung Contacts or dialer keypad! Dial standard 10-digit mobile numbers (e.g. `9876543210`), national numbers (`01234567890`), or international format (`+919876543210`).
-
----
-
 ## Building from Source
 
 > **Note**: Stock PJSIP 2.15.1 is used with two small Jio IMS compatibility patches provided in `patches/` (applied automatically using `python apply_patches.py`). All B2BUA proxy logic is contained in `src/b2bua.cpp`.
