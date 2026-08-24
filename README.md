@@ -38,8 +38,8 @@ Compared to earlier Python/Asterisk/Docker implementations (such as `jiofiber-si
 | **Provisioning Flow** | External Python scripts or manual HTTP web forms | **100% Native Embedded C++ Provisioner** (OTP request & credential extraction inside binary) |
 | **Disk & SSD Impact** | Continuous disk IO log writes and container storage wear | **Zero SSD Wear** — 512 KB RAM ring-buffer + Windows Named Pipe stream |
 | **VPN Overlay Routing** | Static IP binding (causes 1-way audio / disconnects over Tailscale/WireGuard) | **Dynamic OS Kernel Routing (`getsockname`)** — dynamic multi-interface IP detection |
-| **Local Softphone Security** | Unencrypted UDP signaling only | **Dual Transport**: UDP (`5061`) + **Encrypted TLS (`5062`)** with auto-generated 2048-bit RSA certificates |
-| **Port Collision Handling** | Silent failures or background process hangs | **Strict Port Binding** — instant fail-fast detection if port `5061`/`5062` is occupied |
+| **Local Softphone Signaling** | Unencrypted complex signaling | **Standard SIP UDP (5061)** — universal compatibility with all softphones (MicroSIP, Linphone, GS Wave) |
+| **Port Collision Handling** | Silent failures or background process hangs | **Strict Port Binding** — instant fail-fast detection if port `5061` is occupied |
 
 ---
 
@@ -71,6 +71,7 @@ Go to [Releases](https://github.com/sidhantjohnaind/sipserver/releases/tag/v1.3.
 | **Windows x64 (Standalone MSVC)** | [📥 **Download `b2bua_msvc.exe`**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.3.0/b2bua_msvc.exe) | `b2bua_msvc.exe` (1.7 MB) | ⚡ **Native MSVC Executable** (Dual Windows Service + Console Mode) |
 | **Linux x86_64 Standalone** | [🐧 **Download `b2bua-linux-amd64`**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.3.0/b2bua-linux-amd64) | `b2bua-linux-amd64` (2.2 MB) | ✅ Native Linux AMD64 binary with AMR-WB / AMR |
 | **Linux ARM64 Standalone** | [🐧 **Download `b2bua-linux-arm64`**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.3.0/b2bua-linux-arm64) | `b2bua-linux-arm64` (2.6 MB) | ✅ Pre-built for Raspberry Pi / ARM64 Routers / SBCs |
+| **Linux RISC-V 64 Standalone** | [🐧 **Download `b2bua-linux-riscv64`**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.3.0/b2bua-linux-riscv64) | `b2bua-linux-riscv64` (2.4 MB) | ✅ Pre-built for RISC-V 64-bit SBCs / VisionFive / Milk-V |
 | **Linux 1-Click Script** | [🐧 **Download `install_linux.sh`**](https://raw.githubusercontent.com/sidhantjohnaind/sipserver/master/install_linux.sh) | `install_linux.sh` (4.4 KB) | ⚡ **1-Click Linux Installer** (Auto-detects Arch, Firewall, Systemd) |
 
 > **Windows on ARM (Snapdragon X Elite / Surface Pro ARM / Windows 11 ARM64)**:

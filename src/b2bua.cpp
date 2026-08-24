@@ -62,7 +62,6 @@ extern "C" {
 static pjsua_acc_id g_loc_acc_id = PJSUA_INVALID_ID;
 static pjsua_acc_id g_up_acc_id  = PJSUA_INVALID_ID;
 static pjsua_transport_id g_udp_tid = PJSUA_INVALID_ID;
-static pjsua_transport_id g_loc_tls_tid = PJSUA_INVALID_ID;
 static pjsua_transport_id g_tls_tid = PJSUA_INVALID_ID;
 static bool g_running = true;
 
@@ -98,29 +97,23 @@ static void load_env_file(const std::string &filename) {
         file.open("../" + filename);
     }
     if (!file.is_open()) {
-        file.open("../../" + filename);
+        file.open(std::string(getenv("USERPROFILE") ? getenv("USERPROFILE") : "") + "/.jio_b2bua.env");
     }
     if (!file.is_open()) {
-        return;
+        file.open("/etc/jio_b2bua.env");
     }
+    if (!file.is_open()) return;
 
     std::string line;
     while (std::getline(file, line)) {
-        std::string l = trim(line);
-        if (l.empty() || l[0] == '#') continue;
-
-        auto eq = l.find('=');
-        if (eq == std::string::npos) continue;
-
-        std::string key = trim(l.substr(0, eq));
-        std::string val = trim(l.substr(eq + 1));
-
-        if (val.size() >= 2 && ((val.front() == '"' && val.back() == '"') ||
-                                (val.front() == '\'' && val.back() == '\''))) {
-            val = val.substr(1, val.size() - 2);
-        }
-
-        if (!key.empty() && !val.empty()) {
+        line = trim(line);
+        if (line.empty() || line[0] == '#') continue;
+        auto eq = line.find('=');
+        if (eq != std::string::npos) {
+            std::string key = trim(line.substr(0, eq));
+            std::string val = trim(line.substr(eq + 1));
+            if (!val.empty() && (val.front() == '"' || val.front() == '\'')) val.erase(0, 1);
+            if (!val.empty() && (val.back() == '"' || val.back() == '\'')) val.pop_back();
 #ifdef _WIN32
             _putenv_s(key.c_str(), val.c_str());
 #else
@@ -146,119 +139,6 @@ static bool is_env_valid() {
 static bool file_exists(const std::string &filename) {
     std::ifstream f(filename);
     return f.good();
-}
-
-static bool add_x509_ext(X509 *cert, int nid, const char *value) {
-    X509_EXTENSION *ex = NULL;
-    X509V3_CTX ctx;
-    X509V3_set_ctx_nodb(&ctx);
-    X509V3_set_ctx(&ctx, cert, cert, NULL, NULL, 0);
-    ex = X509V3_EXT_conf_nid(NULL, &ctx, nid, (char*)value);
-    if (!ex) return false;
-    X509_add_ext(cert, ex, -1);
-    X509_EXTENSION_free(ex);
-    return true;
-}
-
-static bool generate_self_signed_cert(const std::string &cert_path, const std::string &key_path) {
-    EVP_PKEY *pkey = EVP_PKEY_new();
-    if (!pkey) return false;
-
-    RSA *rsa = RSA_generate_key(2048, RSA_F4, NULL, NULL);
-    if (!rsa) { EVP_PKEY_free(pkey); return false; }
-    EVP_PKEY_assign_RSA(pkey, rsa);
-
-    X509 *x509 = X509_new();
-    if (!x509) { EVP_PKEY_free(pkey); return false; }
-
-    X509_set_version(x509, 2); /* X.509 v3 */
-    ASN1_INTEGER_set(X509_get_serialNumber(x509), 1);
-    X509_gmtime_adj(X509_get_notBefore(x509), 0);
-    X509_gmtime_adj(X509_get_notAfter(x509), 315360000L); /* 10 Years */
-
-    X509_set_pubkey(x509, pkey);
-
-    X509_NAME *name = (X509_NAME*)X509_get_subject_name(x509);
-    X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, (const unsigned char*)"IN", -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, (const unsigned char*)"JioB2BUA", -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (const unsigned char*)"192.168.29.195", -1, -1, 0);
-
-    X509_set_issuer_name(x509, name);
-
-    add_x509_ext(x509, NID_basic_constraints, "critical,CA:TRUE");
-    add_x509_ext(x509, NID_key_usage, "critical,digitalSignature,keyCertSign,cRLSign,keyEncipherment");
-    add_x509_ext(x509, NID_ext_key_usage, "serverAuth,clientAuth");
-    add_x509_ext(x509, NID_subject_alt_name, "IP:192.168.29.195,IP:127.0.0.1,IP:0.0.0.0,DNS:192.168.29.195,DNS:localhost,DNS:JioFiberB2BUA,DNS:br.wln.ims.jio.com");
-
-    X509_sign(x509, pkey, EVP_sha256());
-
-    /* 1. Write Private Key */
-    BIO *bio_key = BIO_new_file(key_path.c_str(), "w");
-    if (bio_key) {
-        PEM_write_bio_PrivateKey(bio_key, pkey, NULL, NULL, 0, NULL, NULL);
-        BIO_free(bio_key);
-    }
-
-    /* 2. Write Public Certificate (PEM) */
-    BIO *bio_cert = BIO_new_file(cert_path.c_str(), "w");
-    if (bio_cert) {
-        PEM_write_bio_X509(bio_cert, x509);
-        BIO_free(bio_cert);
-    }
-
-    /* 3. Write CRT duplicate */
-    BIO *bio_crt = BIO_new_file("cert.crt", "w");
-    if (bio_crt) {
-        PEM_write_bio_X509(bio_crt, x509);
-        BIO_free(bio_crt);
-    }
-
-    /* 4. Write PKCS#12 bundle with password '1234' for Android/iOS KeyStore */
-    PKCS12 *p12 = PKCS12_create(
-        (char*)"1234",
-        (char*)"JioFiberB2BUA",
-        pkey,
-        x509,
-        NULL,
-        NID_pbe_WithSHA1And3_Key_TripleDES_CBC,
-        NID_pbe_WithSHA1And3_Key_TripleDES_CBC,
-        2048,
-        1,
-        0
-    );
-    if (p12) {
-        BIO *bio_p12 = BIO_new_file("cert.p12", "wb");
-        if (bio_p12) {
-            i2d_PKCS12_bio(bio_p12, p12);
-            BIO_free(bio_p12);
-        }
-        BIO *bio_pfx = BIO_new_file("cert.pfx", "wb");
-        if (bio_pfx) {
-            i2d_PKCS12_bio(bio_pfx, p12);
-            BIO_free(bio_pfx);
-        }
-        PKCS12_free(p12);
-    }
-
-    /* 5. Synchronize into certs/ directory */
-#ifdef _WIN32
-    CreateDirectoryA("certs", NULL);
-    CopyFileA(cert_path.c_str(), "certs\\cert.pem", FALSE);
-    CopyFileA(key_path.c_str(), "certs\\key.pem", FALSE);
-    CopyFileA("cert.crt", "certs\\cert.crt", FALSE);
-    CopyFileA("cert.p12", "certs\\cert.p12", FALSE);
-    CopyFileA("cert.pfx", "certs\\cert.pfx", FALSE);
-#else
-    mkdir("certs", 0755);
-    system("cp cert.pem key.pem cert.crt cert.p12 cert.pfx certs/ 2>/dev/null");
-    system("mkdir -p ~/Desktop/JioFiber_TLS_Certs && cp certs/* ~/Desktop/JioFiber_TLS_Certs/ 2>/dev/null");
-#endif
-
-    X509_free(x509);
-    EVP_PKEY_free(pkey);
-    std::cout << "[b2bua] Generated X.509v3 TLS certificates & Android PKCS#12 bundle in pure C++!\n";
-    std::cout << "[b2bua] -> cert.pem, cert.crt, cert.p12 (Password: '1234'), key.pem\n";
-    return true;
 }
 
 /* ------------------------------------------------------------------ */
@@ -538,31 +418,6 @@ static bool run_cpp_otp_provisioner() {
     }
 
     std::cout << "\n[b2bua] OTP Verified Successfully!\n";
-    std::cout << "[b2bua] Local TLS Setup:\n";
-    std::cout << "  1) Disable Local TLS (UDP port 5061 only) [Default]\n";
-    std::cout << "  2) Enable Local TLS & generate brand new cert pair\n";
-    std::cout << "  3) Enable Local TLS & keep existing cert.pem from disk\n";
-    std::cout << "Select option [1, 2, or 3, default: 1]: ";
-    std::cout.flush();
-
-    std::string cert_choice;
-    if (std::cin.peek() == '\n') std::cin.get();
-    std::getline(std::cin, cert_choice);
-    cert_choice = trim(cert_choice);
-
-    std::string gen_new_flag = "0";
-    std::string enable_tls_flag = "0";
-
-    if (cert_choice == "2") {
-        enable_tls_flag = "1";
-        gen_new_flag = "1";
-    } else if (cert_choice == "3") {
-        enable_tls_flag = "1";
-        gen_new_flag = "0";
-    } else {
-        enable_tls_flag = "0";
-        gen_new_flag = "0";
-    }
 
     std::ofstream env_out(".env");
     if (!env_out.is_open()) return false;
@@ -573,9 +428,6 @@ static bool run_cpp_otp_provisioner() {
     env_out << "USER_AGENT=JSEAndrd-1.0\n";
     env_out << "IPV4_ADDRESS=192.168.29.195\n";
     env_out << "LOCAL_PORT=5061\n";
-    env_out << "LOCAL_TLS_PORT=5062\n";
-    env_out << "ENABLE_LOCAL_TLS=" << enable_tls_flag << "\n";
-    env_out << "GENERATE_NEW_TLS_CERT=" << gen_new_flag << "\n";
     env_out << "TLS_PORT=5068\n";
     env_out << "RTP_PORT=52000\n";
     env_out << "PUBLIC_ID=" << public_id << "\n";
@@ -1411,50 +1263,7 @@ static int run_b2bua_server() {
         return 1;
     }
 
-    /* Local TLS Transport (For local softphones on port 5062) */
-    std::string enable_loc_tls = get_env_def("ENABLE_LOCAL_TLS", "1");
-    if (enable_loc_tls != "0" && enable_loc_tls != "false" && enable_loc_tls != "off") {
-        pjsua_transport_config loc_tls_cfg;
-        pjsua_transport_config_default(&loc_tls_cfg);
-        int local_tls_port = std::stoi(get_env_def("LOCAL_TLS_PORT", "5062"));
-        loc_tls_cfg.port = local_tls_port;
-#if defined(PJSIP_TLSV1_2_METHOD)
-        loc_tls_cfg.tls_setting.method = PJSIP_TLSV1_2_METHOD;
-#endif
-
-        std::string tls_cert = get_env_def("TLS_CERT_FILE", "cert.pem");
-        std::string tls_key  = get_env_def("TLS_KEY_FILE", "key.pem");
-        std::string force_gen = get_env_def("GENERATE_NEW_TLS_CERT", "0");
-
-        if (force_gen == "1" || force_gen == "true" || !file_exists(tls_cert) || !file_exists(tls_key)) {
-            std::cout << "[b2bua] Generating new TLS certificate pair..." << std::endl;
-            generate_self_signed_cert(tls_cert, tls_key);
-        } else {
-            std::cout << "[b2bua] Using existing TLS certificate from disk: " << tls_cert << std::endl;
-        }
-
-        if (file_exists(tls_cert) && file_exists(tls_key)) {
-            loc_tls_cfg.tls_setting.cert_file = pj_str((char*)tls_cert.c_str());
-            loc_tls_cfg.tls_setting.privkey_file = pj_str((char*)tls_key.c_str());
-            std::cout << "[b2bua] -> Copy '" << tls_cert << "' to your phone to install manually into Linphone / Phone CA Store." << std::endl;
-        }
-
-        loc_tls_cfg.tls_setting.verify_server = PJ_FALSE;
-        loc_tls_cfg.tls_setting.verify_client = PJ_FALSE;
-
-        pj_status_t loc_tls_status = pjsua_transport_create(PJSIP_TRANSPORT_TLS, &loc_tls_cfg, &g_loc_tls_tid);
-        if (loc_tls_status != PJ_SUCCESS) {
-            std::cout << "[b2bua] ERROR: Failed to bind to Local TLS port " << local_tls_port << " (port already in use). Exiting." << std::endl;
-            PJ_LOG(1, (THIS_FILE, "Error creating Local SIP TLS transport on port %d", local_tls_port));
-            pjsua_destroy();
-            return 1;
-        }
-        std::cout << "[b2bua] Enabled Local TLS listener on port " << local_tls_port << std::endl;
-    } else {
-        std::cout << "[b2bua] Local TLS listener disabled (UDP port 5061 only)" << std::endl;
-    }
-
-    /* TLS Transport (Jio Router Upstream) */
+    /* Upstream TLS Transport (Jio Router at 192.168.29.1:5068) */
     pjsua_transport_config tls_cfg;
     pjsua_transport_config_default(&tls_cfg);
     tls_cfg.port = 0; /* Ephemeral port for outgoing TLS */
@@ -1640,17 +1449,6 @@ int main(int argc, char *argv[]) {
         }
     }
 #endif
-
-    for (int i = 1; i < argc; ++i) {
-        std::string arg = argv[i];
-        if (arg == "--gen-cert" || arg == "--gen-certs" || arg == "-g") {
-            std::cout << "[b2bua] Generating fresh TLS certificates & PKCS#12 bundle in pure C++...\n";
-            std::string cert_file = get_env_def("TLS_CERT_FILE", "cert.pem");
-            std::string key_file  = get_env_def("TLS_KEY_FILE", "key.pem");
-            generate_self_signed_cert(cert_file, key_file);
-            return 0;
-        }
-    }
 
     return run_b2bua_server();
 }

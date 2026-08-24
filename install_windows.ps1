@@ -1,4 +1,4 @@
-﻿# =====================================================================
+# =====================================================================
 # JioFiber SIP B2BUA - 1-Click PowerShell Installer & Service Setup
 # =====================================================================
 # Usage:
@@ -52,15 +52,12 @@ Write-Host "[*] Configuring Windows Firewall rules..." -ForegroundColor Cyan
 netsh advfirewall firewall delete rule name="JioFiber B2BUA SIP UDP" 2>$null | Out-Null
 netsh advfirewall firewall add rule name="JioFiber B2BUA SIP UDP" dir=in action=allow protocol=UDP localport=5061 | Out-Null
 
-netsh advfirewall firewall delete rule name="JioFiber B2BUA SIP TLS" 2>$null | Out-Null
-netsh advfirewall firewall add rule name="JioFiber B2BUA SIP TLS" dir=in action=allow protocol=TCP localport=5062 | Out-Null
-
 netsh advfirewall firewall delete rule name="JioFiber B2BUA RTP Media UDP" 2>$null | Out-Null
 netsh advfirewall firewall add rule name="JioFiber B2BUA RTP Media UDP" dir=in action=allow protocol=UDP localport=4000-4050,52000-52200 | Out-Null
 
 netsh advfirewall firewall delete rule name="JioFiber B2BUA App" 2>$null | Out-Null
 netsh advfirewall firewall add rule name="JioFiber B2BUA App" dir=in action=allow program="$exePath" enable=yes | Out-Null
-Write-Host "[x] Firewall rules configured (UDP 5061, TCP 5062, UDP 4000-4050, 52000-52200)!" -ForegroundColor Green
+Write-Host "[x] Firewall rules configured (UDP 5061, UDP 4000-4050, 52000-52200)!" -ForegroundColor Green
 
 # Step 6: Create and configure Windows Service
 Write-Host "[*] Registering JioFiberB2BUA Windows Service..." -ForegroundColor Cyan

@@ -1,4 +1,4 @@
-﻿; =====================================================================
+; =====================================================================
 ; JioFiber SIP B2BUA - Inno Setup 6 Script
 ; =====================================================================
 
@@ -39,7 +39,6 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 Source: "bin\windows-x64\b2bua_msvc.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "view_logs.bat"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
-Source: "bin\windows-x64\install_ca_cert.bat"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "run_windows.bat"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 
 [Icons]
@@ -52,8 +51,6 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\b2bua_msvc.exe"; Parameters
 ; Configure Firewall Rules
 Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""JioFiber B2BUA SIP UDP"""; Flags: runhidden
 Filename: "netsh"; Parameters: "advfirewall firewall add rule name=""JioFiber B2BUA SIP UDP"" dir=in action=allow protocol=UDP localport=5061"; Flags: runhidden
-Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""JioFiber B2BUA SIP TLS"""; Flags: runhidden
-Filename: "netsh"; Parameters: "advfirewall firewall add rule name=""JioFiber B2BUA SIP TLS"" dir=in action=allow protocol=TCP localport=5062"; Flags: runhidden
 Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""JioFiber B2BUA RTP Media UDP"""; Flags: runhidden
 Filename: "netsh"; Parameters: "advfirewall firewall add rule name=""JioFiber B2BUA RTP Media UDP"" dir=in action=allow protocol=UDP localport=4000-4050,52000-52200"; Flags: runhidden
 Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""JioFiber B2BUA App"""; Flags: runhidden
@@ -71,6 +68,5 @@ Filename: "sc.exe"; Parameters: "start JioFiberB2BUA"; Flags: runhidden nowait
 Filename: "sc.exe"; Parameters: "stop JioFiberB2BUA"; Flags: runhidden
 Filename: "sc.exe"; Parameters: "delete JioFiberB2BUA"; Flags: runhidden
 Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""JioFiber B2BUA SIP UDP"""; Flags: runhidden
-Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""JioFiber B2BUA SIP TLS"""; Flags: runhidden
 Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""JioFiber B2BUA RTP Media UDP"""; Flags: runhidden
 Filename: "netsh"; Parameters: "advfirewall firewall delete rule name=""JioFiber B2BUA App"""; Flags: runhidden

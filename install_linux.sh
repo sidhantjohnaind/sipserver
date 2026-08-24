@@ -35,6 +35,10 @@ elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
     BIN_NAME="b2bua-linux-arm64"
     LOCAL_BIN="$SCRIPT_DIR/bin/linux-arm64/b2bua"
     LOCAL_LIB="$SCRIPT_DIR/bin/linux-arm64/lib"
+elif [ "$ARCH" = "riscv64" ]; then
+    BIN_NAME="b2bua-linux-riscv64"
+    LOCAL_BIN="$SCRIPT_DIR/bin/linux-riscv64/b2bua"
+    LOCAL_LIB="$SCRIPT_DIR/bin/linux-riscv64/lib"
 else
     BIN_NAME="b2bua-linux-amd64"
     LOCAL_BIN="$SCRIPT_DIR/bin/linux-amd64/b2bua"
@@ -65,22 +69,19 @@ echo "[x] Binary ready at: $TARGET_BIN"
 echo ""
 
 # 2. Configure Firewall Ports
-echo "[*] Step 2/3: Configuring Firewall Ports (UDP 5061, TCP 5062, UDP 4000-4050, UDP 52000-52200)..."
+echo "[*] Step 2/3: Configuring Firewall Ports (UDP 5061, UDP 4000-4050, UDP 52000-52200)..."
 if command -v ufw >/dev/null 2>&1; then
     ufw allow 5061/udp >/dev/null 2>&1
-    ufw allow 5062/tcp >/dev/null 2>&1
     ufw allow 4000:4050/udp >/dev/null 2>&1
     ufw allow 52000:52200/udp >/dev/null 2>&1
     ufw reload >/dev/null 2>&1
 elif command -v firewall-cmd >/dev/null 2>&1; then
     firewall-cmd --add-port=5061/udp --permanent >/dev/null 2>&1
-    firewall-cmd --add-port=5062/tcp --permanent >/dev/null 2>&1
     firewall-cmd --add-port=4000-4050/udp --permanent >/dev/null 2>&1
     firewall-cmd --add-port=52000-52200/udp --permanent >/dev/null 2>&1
     firewall-cmd --reload >/dev/null 2>&1
 elif command -v iptables >/dev/null 2>&1; then
     iptables -A INPUT -p udp --dport 5061 -j ACCEPT
-    iptables -A INPUT -p tcp --dport 5062 -j ACCEPT
     iptables -A INPUT -p udp --dport 4000:4050 -j ACCEPT
     iptables -A INPUT -p udp --dport 52000:52200 -j ACCEPT
 fi
@@ -98,8 +99,8 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=$SCRIPT_DIR
-Environment="LD_LIBRARY_PATH=$SCRIPT_DIR/lib:$SCRIPT_DIR/bin/linux-amd64/lib:$SCRIPT_DIR/bin/linux-arm64/lib:/usr/local/lib:/usr/lib"
-ExecStartPre=-/bin/sh -c 'command -v fuser >/dev/null && fuser -k -9 5061/udp 5061/tcp 5062/tcp 5062/udp 2>/dev/null || true'
+Environment="LD_LIBRARY_PATH=$SCRIPT_DIR/lib:$SCRIPT_DIR/bin/linux-amd64/lib:$SCRIPT_DIR/bin/linux-arm64/lib:$SCRIPT_DIR/bin/linux-riscv64/lib:/usr/local/lib:/usr/lib"
+ExecStartPre=-/bin/sh -c 'command -v fuser >/dev/null && fuser -k -9 5061/udp 5061/tcp 2>/dev/null || true'
 ExecStart=$TARGET_BIN
 Restart=always
 RestartSec=5

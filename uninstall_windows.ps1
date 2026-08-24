@@ -1,4 +1,4 @@
-﻿# =====================================================================
+# =====================================================================
 # JioFiber SIP B2BUA - 1-Click PowerShell Uninstaller
 # =====================================================================
 # Usage:
@@ -21,7 +21,6 @@ taskkill /F /IM b2bua_msvc.exe 2>$null | Out-Null
 sc.exe delete JioFiberB2BUA 2>$null | Out-Null
 
 netsh advfirewall firewall delete rule name="JioFiber B2BUA SIP UDP" 2>$null | Out-Null
-netsh advfirewall firewall delete rule name="JioFiber B2BUA SIP TLS" 2>$null | Out-Null
 netsh advfirewall firewall delete rule name="JioFiber B2BUA RTP Media UDP" 2>$null | Out-Null
 netsh advfirewall firewall delete rule name="JioFiber B2BUA App" 2>$null | Out-Null
 
