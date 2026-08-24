@@ -119,13 +119,15 @@ jobs:
 
       - name: Install RISC-V 64 Cross Compiler & OpenSSL
         run: |
-          sudo dpkg --add-architecture riscv64
-          sudo sed -i 's/deb http/deb [arch=amd64] http/g' /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null || true
-          echo "deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports $(lsb_release -cs) main universe" | sudo tee /etc/apt/sources.list.d/riscv64.list
-          echo "deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports $(lsb_release -cs)-updates main universe" | sudo tee -a /etc/apt/sources.list.d/riscv64.list
-          echo "deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports $(lsb_release -cs)-security main universe" | sudo tee -a /etc/apt/sources.list.d/riscv64.list
           sudo apt-get update
-          sudo apt-get install -y gcc-riscv64-linux-gnu g++-riscv64-linux-gnu libssl-dev:riscv64
+          sudo apt-get install -y gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
+          mkdir -p /tmp/riscv64_sysroot
+          curl -sSL "http://ftp.debian.org/debian/pool/main/o/openssl/libssl3t64_3.4.1-1_riscv64.deb" -o /tmp/libssl.deb || \
+          curl -sSL "http://ftp.debian.org/debian/pool/main/o/openssl/libssl3_3.0.15-1~deb12u1_riscv64.deb" -o /tmp/libssl.deb
+          curl -sSL "http://ftp.debian.org/debian/pool/main/o/openssl/libssl-dev_3.4.1-1_riscv64.deb" -o /tmp/libssl-dev.deb || \
+          curl -sSL "http://ftp.debian.org/debian/pool/main/o/openssl/libssl-dev_3.0.15-1~deb12u1_riscv64.deb" -o /tmp/libssl-dev.deb
+          dpkg-deb -x /tmp/libssl.deb /tmp/riscv64_sysroot 2>/dev/null || true
+          dpkg-deb -x /tmp/libssl-dev.deb /tmp/riscv64_sysroot 2>/dev/null || true
 
       - name: Build Linux riscv64 Binary
         run: |
