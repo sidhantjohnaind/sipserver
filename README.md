@@ -47,9 +47,25 @@ Compared to earlier Python/Asterisk/Docker implementations (such as `jiofiber-si
 
 ## Quick Start
 
-### 1. Download a pre-built binary / 1-Click Installer
+### ⚡ 1-Line Copy & Paste Installers
 
-Go to [Releases](https://github.com/sidhantjohnaind/sipserver/releases/tag/v1.3.0) and download the 1-click installer or standalone binary for your target platform:
+#### 🪟 Windows (PowerShell):
+Open **PowerShell** and paste:
+```powershell
+irm https://raw.githubusercontent.com/sidhantjohnaind/sipserver/master/install_windows.ps1 | iex
+```
+
+#### 🐧 Linux (x86_64 / ARM64 / RISC-V):
+Open **Terminal** and paste:
+```bash
+curl -sSL https://raw.githubusercontent.com/sidhantjohnaind/sipserver/master/install_linux.sh | sudo bash
+```
+
+---
+
+### 📦 Download Pre-Built Binaries & Installers
+
+Go to [Releases](https://github.com/sidhantjohnaind/sipserver/releases/tag/v1.3.0) to download standalone packages:
 
 | Platform | Download Link | Package Name | Type / Notes |
 |---|---|---|---|

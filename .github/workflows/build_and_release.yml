@@ -67,19 +67,78 @@ jobs:
       - name: Build Linux amd64 Binary
         run: |
           python3 src/build_wsl.py || true
-          if [ ! -f bin/linux-amd64/b2bua ]; then
+          if [ -f b2bua ]; then
             mkdir -p bin/linux-amd64
-            g++ -O2 -std=c++17 src/b2bua.cpp -o bin/linux-amd64/b2bua -Ithird_party/pjproject-2.15.1 -Ithird_party/opencore-amr/include -lssl -lcrypto -lpthread -lopencore-amrnb || true
+            cp b2bua bin/linux-amd64/b2bua
+            cp b2bua b2bua-linux-amd64
           fi
 
       - name: Upload Linux amd64 Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-amd64-binary
-          path: bin/linux-amd64/b2bua
+          path: |
+            bin/linux-amd64/b2bua
+            b2bua-linux-amd64
+
+  build-linux-arm64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Cross Compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
+      - name: Build Linux arm64 Binary
+        run: |
+          mkdir -p bin/linux-arm64
+          if [ -f bin/linux-arm64/b2bua ]; then
+            cp bin/linux-arm64/b2bua b2bua-linux-arm64
+          fi
+
+      - name: Upload Linux arm64 Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-arm64-binary
+          path: |
+            bin/linux-arm64/b2bua
+            b2bua-linux-arm64
+
+  build-linux-riscv64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install RISC-V 64 Cross Compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
+
+      - name: Build Linux riscv64 Binary
+        run: |
+          python3 src/build_riscv64.py || true
+          mkdir -p bin/linux-riscv64
+          if [ -f b2bua-riscv64 ]; then
+            cp b2bua-riscv64 bin/linux-riscv64/b2bua
+            cp b2bua-riscv64 b2bua-linux-riscv64
+          elif [ -f bin/linux-riscv64/b2bua ]; then
+            cp bin/linux-riscv64/b2bua b2bua-linux-riscv64
+          fi
+
+      - name: Upload Linux riscv64 Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-riscv64-binary
+          path: |
+            bin/linux-riscv64/b2bua
+            b2bua-linux-riscv64
 
   publish-release:
-    needs: [build-windows, build-linux-amd64]
+    needs: [build-windows, build-linux-amd64, build-linux-arm64, build-linux-riscv64]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
@@ -93,4 +152,6 @@ jobs:
             windows-binaries/b2bua_msvc.exe
             windows-binaries/JioFiber_B2BUA_Setup_x64.exe
             windows-binaries/JioFiber_B2BUA_Setup.exe
-            linux-amd64-binary/b2bua
+            linux-amd64-binary/b2bua-linux-amd64
+            linux-arm64-binary/b2bua-linux-arm64
+            linux-riscv64-binary/b2bua-linux-riscv64
