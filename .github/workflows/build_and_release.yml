@@ -127,6 +127,17 @@ jobs:
           dpkg-deb -x /tmp/libssl3.deb /tmp/riscv64_sysroot
           dpkg-deb -x /tmp/libssl-dev.deb /tmp/riscv64_sysroot
 
+      - name: Debug sysroot
+        run: |
+          echo "=== OpenSSL headers ==="
+          find /tmp/riscv64_sysroot -name "ssl.h" 2>/dev/null || echo "ssl.h not found"
+          echo "=== OpenSSL libs ==="
+          find /tmp/riscv64_sysroot -name "libssl*" 2>/dev/null | head -5
+          echo "=== Cross compiler test ==="
+          echo "#include <openssl/ssl.h>" > /tmp/test_ssl.c
+          echo "int main(){return 0;}" >> /tmp/test_ssl.c
+          riscv64-linux-gnu-gcc -I/tmp/riscv64_sysroot/usr/include -I/tmp/riscv64_sysroot/usr/include/riscv64-linux-gnu -c /tmp/test_ssl.c -o /tmp/test_ssl.o && echo "SSL compile OK" || echo "SSL compile FAILED"
+
       - name: Build Linux riscv64 Binary
         run: |
           python3 src/build_riscv64.py
