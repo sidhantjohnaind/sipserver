@@ -31,6 +31,29 @@ fi
 
 chmod +x "$BINARY_PATH"
 
+# Configure Firewall Ports
+echo "[*] Configuring Firewall Ports (UDP 5061, TCP 5062, UDP 4000-4050, UDP 52000-52200)..."
+if command -v ufw >/dev/null 2>&1; then
+    ufw allow 5061/udp >/dev/null 2>&1
+    ufw allow 5062/tcp >/dev/null 2>&1
+    ufw allow 4000:4050/udp >/dev/null 2>&1
+    ufw allow 52000:52200/udp >/dev/null 2>&1
+    ufw reload >/dev/null 2>&1
+elif command -v firewall-cmd >/dev/null 2>&1; then
+    firewall-cmd --add-port=5061/udp --permanent >/dev/null 2>&1
+    firewall-cmd --add-port=5062/tcp --permanent >/dev/null 2>&1
+    firewall-cmd --add-port=4000-4050/udp --permanent >/dev/null 2>&1
+    firewall-cmd --add-port=52000-52200/udp --permanent >/dev/null 2>&1
+    firewall-cmd --reload >/dev/null 2>&1
+elif command -v iptables >/dev/null 2>&1; then
+    iptables -A INPUT -p udp --dport 5061 -j ACCEPT
+    iptables -A INPUT -p tcp --dport 5062 -j ACCEPT
+    iptables -A INPUT -p udp --dport 4000:4050 -j ACCEPT
+    iptables -A INPUT -p udp --dport 52000:52200 -j ACCEPT
+fi
+echo "[x] Firewall rules applied!"
+echo ""
+
 cat <<EOF > /etc/systemd/system/jiofiber-b2bua.service
 [Unit]
 Description=JioFiber SIP B2BUA Proxy Service

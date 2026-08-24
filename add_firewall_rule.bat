@@ -17,8 +17,9 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-echo [*] Adding Inbound Firewall Rules for UDP Port 5061, 5062 & TLS Port 5068...
+echo [*] Adding Inbound Firewall Rules for UDP/TCP Port 5061, 5062 & TLS Port 5068...
 powershell -Command "New-NetFirewallRule -DisplayName 'Jio B2BUA UDP 5061' -Direction Inbound -LocalPort 5061 -Protocol UDP -Action Allow -ErrorAction SilentlyContinue"
+powershell -Command "New-NetFirewallRule -DisplayName 'Jio B2BUA TCP 5061' -Direction Inbound -LocalPort 5061 -Protocol TCP -Action Allow -ErrorAction SilentlyContinue"
 powershell -Command "New-NetFirewallRule -DisplayName 'Jio B2BUA UDP 5062' -Direction Inbound -LocalPort 5062 -Protocol UDP -Action Allow -ErrorAction SilentlyContinue"
 powershell -Command "New-NetFirewallRule -DisplayName 'Jio B2BUA Executable' -Direction Inbound -Program '%~dp0bin\windows-x64\b2bua_msvc.exe' -Action Allow -ErrorAction SilentlyContinue"
 

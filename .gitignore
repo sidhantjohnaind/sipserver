@@ -12,6 +12,10 @@
 *.pfx
 certs/
 INSTRUCTIONS.txt
+otp_session.json
+scratch_*.py
+qc
+*.log
 
 # ============================================================
 # Build artifacts — compiled binaries & object files

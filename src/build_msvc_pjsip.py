@@ -16,8 +16,41 @@ if os.path.exists(obj_dir):
     shutil.rmtree(obj_dir)
 os.makedirs(obj_dir, exist_ok=True)
 
-cl_bin = r'D:\msvc\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\cl.exe'
-link_bin = r'D:\msvc\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\link.exe'
+def find_first_existing(paths, check_subpath=None):
+    for p in paths:
+        if os.path.exists(p):
+            if check_subpath and not os.path.exists(os.path.join(p, check_subpath)):
+                continue
+            return p
+    return paths[0]
+
+msvc_root = find_first_existing([
+    r'D:\msvc\VC\Tools\MSVC\14.44.35207',
+    r'D:\msvc\VC\Tools\MSVC\14.51.36231',
+    r'C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207'
+], check_subpath=r'bin\Hostx64\x64\cl.exe')
+
+cl_bin = os.path.join(msvc_root, 'bin', 'Hostx64', 'x64', 'cl.exe')
+link_bin = os.path.join(msvc_root, 'bin', 'Hostx64', 'x64', 'link.exe')
+
+sdk_root = find_first_existing([
+    r'C:\Program Files (x86)\Windows Kits\10',
+    r'F:\Program Files (x86)\Windows Kits\10',
+    r'D:\Windows Kits\10'
+], check_subpath='Include')
+
+sdk_ver = '10.0.26100.0'
+inc_ver_dir = os.path.join(sdk_root, 'Include')
+if os.path.exists(inc_ver_dir):
+    vers = [v for v in os.listdir(inc_ver_dir) if v.startswith('10.')]
+    if vers:
+        sdk_ver = sorted(vers)[-1]
+
+ssl_root = find_first_existing([
+    r'C:\Program Files\OpenSSL-Win64',
+    r'D:\Program Files\OpenSSL-Win64',
+    r'F:\Program Files\OpenSSL-Win64'
+], check_subpath=r'include\openssl\ssl.h')
 
 oc_amr_inc = os.path.join(root, 'third_party', 'opencore-amr', 'include')
 
@@ -32,20 +65,20 @@ inc_dirs = [
     os.path.join(pj_dir, 'third_party', 'resample', 'include'),
     os.path.join(pj_dir, 'third_party', 'resample', 'src'),
     oc_amr_inc,
-    r'C:\Program Files\OpenSSL-Win64\include',
-    r'D:\msvc\VC\Tools\MSVC\14.44.35207\include',
-    r'C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt',
-    r'C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um',
-    r'C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\shared',
+    os.path.join(ssl_root, 'include'),
+    os.path.join(msvc_root, 'include'),
+    os.path.join(sdk_root, 'Include', sdk_ver, 'ucrt'),
+    os.path.join(sdk_root, 'Include', sdk_ver, 'um'),
+    os.path.join(sdk_root, 'Include', sdk_ver, 'shared'),
 ]
 
 oc_amr_lib = os.path.join(root, 'third_party', 'opencore-amr', 'lib')
 
 lib_dirs = [
-    r'D:\msvc\VC\Tools\MSVC\14.44.35207\lib\x64',
-    r'C:\Program Files (x86)\Windows Kits\10\Lib\10.0.26100.0\ucrt\x64',
-    r'C:\Program Files (x86)\Windows Kits\10\Lib\10.0.26100.0\um\x64',
-    r'C:\Program Files\OpenSSL-Win64\lib\VC\x64\MD',
+    os.path.join(msvc_root, 'lib', 'x64'),
+    os.path.join(sdk_root, 'Lib', sdk_ver, 'ucrt', 'x64'),
+    os.path.join(sdk_root, 'Lib', sdk_ver, 'um', 'x64'),
+    os.path.join(ssl_root, 'lib', 'VC', 'x64', 'MD'),
     oc_amr_lib,
 ]
 
@@ -65,7 +98,13 @@ subdirs = [
 
 # Files to EXCLUDE from compilation
 exact_excludes = [
-    'main.c', 'milenage.c', 'speex_codec.c',
+    'main.c', 'milenage.c', 'speex_codec.c', 'echo_speex.c',
+    'g722.c', 'g7221.c', 'gsm.c', 'ilbc.c',
+    'transport_srtp.c', 'transport_srtp_sdes.c', 'transport_srtp_dtls.c',
+    'guid_android.c', 'guid_bsd.c', 'guid_darwin.c', 'guid_uuid.c',
+    'ioqueue_common_abs.c', 'ioqueue_dummy.c', 'ioqueue_epoll.c', 'ioqueue_kqueue.c',
+    'log_writer_printk.c', 'os_rwmutex.c', 'os_time_unix.c', 'pool_policy_kmalloc.c',
+    'scanner_cis_bitwise.c', 'scanner_cis_uint.c',
     'file_access_unistd.c', 'file_io_ansi.c', 'guid_simple.c',
     'ioqueue_select.c', 'os_time_bsd.c', 'os_timestamp_posix.c',
     'os_error_unix.c', 'os_core_unix.c',
@@ -74,7 +113,7 @@ exact_excludes = [
     'sock_qos_bsd.c', 'sock_qos_darwin.c', 'sock_qos_wm.c',
     # SSL: exclude non-OpenSSL implementations (we use ssl_sock_ossl.c with OpenSSL)
     # ssl_sock_imp_common.c is #included from ssl_sock_ossl.c, not compiled separately
-    'ssl_sock_gtls.c', 'ssl_sock_darwin.c', 'ssl_sock_schannel.c',
+    'ssl_sock_gtls.c', 'ssl_sock_darwin.c', 'ssl_sock_schannel.c', 'ssl_sock_imp_common.c',
     'extra-exports.c'
 ]
 
@@ -96,7 +135,7 @@ for sd in subdirs:
                 c_files.append(os.path.join(dpath, f))
 
 inc_cmd = " ".join([f'/I"{d}"' for d in inc_dirs])
-defs = '/DPJ_WIN32=1 /DPJ_M_X86_64=1 /D_CRT_SECURE_NO_WARNINGS /D_WINSOCK_DEPRECATED_NO_WARNINGS /DPJSIP_MAX_URL_SIZE=1024 /DPJMEDIA_HAS_OPENCORE_AMRNB_CODEC=1 /DPJMEDIA_AUTO_LINK_OPENCORE_AMR_LIBS=0 /DPJMEDIA_HAS_G711_CODEC=1 /DPJMEDIA_HAS_G722_CODEC=1 /DPJMEDIA_HAS_GSM_CODEC=1'
+defs = '/DPJ_WIN32=1 /DPJ_M_X86_64=1 /D_CRT_SECURE_NO_WARNINGS /D_WINSOCK_DEPRECATED_NO_WARNINGS /DPJ_QOS_IMPLEMENTATION=PJ_QOS_DUMMY /DPJMEDIA_HAS_SRTP=0 /DPJMEDIA_HAS_SPEEX_CODEC=0 /DPJMEDIA_HAS_SPEEX_AEC=0 /DPJMEDIA_HAS_ILBC_CODEC=0 /DPJMEDIA_HAS_G722_CODEC=0 /DPJMEDIA_HAS_GSM_CODEC=0 /DPJMEDIA_HAS_G711_CODEC=1 /DPJMEDIA_HAS_OPENCORE_AMRNB_CODEC=1 /DPJMEDIA_HAS_OPENCORE_AMRWB_CODEC=0 /DPJMEDIA_AUTO_LINK_OPENCORE_AMR_LIBS=0'
 
 failed_files = []
 

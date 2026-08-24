@@ -5,7 +5,7 @@ color 0A
 :: Check for Administrator privileges
 net session >nul 2>&1
 if %errorLevel% neq 0 (
-    echo [!] Please run this script as Administrator (Right click -> Run as Administrator).
+    echo [!] Please run this script as Administrator - Right click and select 'Run as Administrator'.
     pause
     exit /b 1
 )
@@ -25,6 +25,19 @@ if not exist "%EXE_PATH%" (
     exit /b 1
 )
 
+:: Configure Windows Firewall Rules
+echo [*] Configuring Windows Firewall rules...
+netsh advfirewall firewall delete rule name="JioFiber B2BUA SIP UDP" 2>nul
+netsh advfirewall firewall add rule name="JioFiber B2BUA SIP UDP" dir=in action=allow protocol=UDP localport=5061
+netsh advfirewall firewall delete rule name="JioFiber B2BUA SIP TLS" 2>nul
+netsh advfirewall firewall add rule name="JioFiber B2BUA SIP TLS" dir=in action=allow protocol=TCP localport=5062
+netsh advfirewall firewall delete rule name="JioFiber B2BUA RTP Media UDP" 2>nul
+netsh advfirewall firewall add rule name="JioFiber B2BUA RTP Media UDP" dir=in action=allow protocol=UDP localport=4000-4050,52000-52200
+netsh advfirewall firewall delete rule name="JioFiber B2BUA App" 2>nul
+netsh advfirewall firewall add rule name="JioFiber B2BUA App" dir=in action=allow program="%EXE_PATH%" enable=yes
+echo [x] Firewall rules applied (UDP 5061, TCP 5062, UDP 4000-4050, 52000-52200, Binary)!
+echo.
+
 :: Terminate any running processes
 taskkill /F /IM b2bua_msvc.exe >nul 2>&1
 
@@ -40,7 +53,7 @@ sc start JioFiberB2BUA
 
 echo.
 echo =====================================================================
-echo   [SUCCESS] JioFiber B2BUA Windows Service installed & started!
+echo   [SUCCESS] JioFiber B2BUA Windows Service installed and started!
 echo   Service Name: JioFiberB2BUA
 echo   View Logs:    view_logs.bat
 echo =====================================================================

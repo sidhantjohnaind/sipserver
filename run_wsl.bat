@@ -12,7 +12,7 @@ cd /d "%~dp0"
 :: Check if WSL is available
 wsl --status >nul 2>&1
 if errorlevel 1 (
-    echo [!] WSL (Windows Subsystem for Linux) is not installed or enabled.
+    echo [!] WSL - Windows Subsystem for Linux is not installed or enabled.
     echo [*] Please install WSL by running 'wsl --install' in Administrator PowerShell.
     pause
     exit /b 1

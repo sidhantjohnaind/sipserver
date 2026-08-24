@@ -33,27 +33,19 @@ typedef int SOCKET;
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <sstream>
-#include <vector>
-#include <map>
-#include <memory>
-#include <mutex>
-#include <chrono>
-#include <thread>
-#include <cstring>
-#include <cstdlib>
-#include <cctype>
-#include <algorithm>
 #include <string_view>
+#include <vector>
 #include <unordered_map>
+#include <algorithm>
 #include <random>
+#include <sstream>
+#include <cctype>
 #include <csignal>
+#include <cstdlib>
+#include <cstring>
 
 extern "C" {
 #include <pjsua-lib/pjsua.h>
-#include <pjmedia-codec/audio_codecs.h>
-#include <pjmedia-codec/opencore_amr.h>
-#include <pjmedia/g711.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/x509.h>
@@ -156,7 +148,118 @@ static bool file_exists(const std::string &filename) {
     return f.good();
 }
 
+static bool add_x509_ext(X509 *cert, int nid, const char *value) {
+    X509_EXTENSION *ex = NULL;
+    X509V3_CTX ctx;
+    X509V3_set_ctx_nodb(&ctx);
+    X509V3_set_ctx(&ctx, cert, cert, NULL, NULL, 0);
+    ex = X509V3_EXT_conf_nid(NULL, &ctx, nid, (char*)value);
+    if (!ex) return false;
+    X509_add_ext(cert, ex, -1);
+    X509_EXTENSION_free(ex);
+    return true;
+}
 
+static bool generate_self_signed_cert(const std::string &cert_path, const std::string &key_path) {
+    EVP_PKEY *pkey = EVP_PKEY_new();
+    if (!pkey) return false;
+
+    RSA *rsa = RSA_generate_key(2048, RSA_F4, NULL, NULL);
+    if (!rsa) { EVP_PKEY_free(pkey); return false; }
+    EVP_PKEY_assign_RSA(pkey, rsa);
+
+    X509 *x509 = X509_new();
+    if (!x509) { EVP_PKEY_free(pkey); return false; }
+
+    X509_set_version(x509, 2); /* X.509 v3 */
+    ASN1_INTEGER_set(X509_get_serialNumber(x509), 1);
+    X509_gmtime_adj(X509_get_notBefore(x509), 0);
+    X509_gmtime_adj(X509_get_notAfter(x509), 315360000L); /* 10 Years */
+
+    X509_set_pubkey(x509, pkey);
+
+    X509_NAME *name = (X509_NAME*)X509_get_subject_name(x509);
+    X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, (const unsigned char*)"IN", -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, (const unsigned char*)"JioB2BUA", -1, -1, 0);
+    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (const unsigned char*)"192.168.29.195", -1, -1, 0);
+
+    X509_set_issuer_name(x509, name);
+
+    add_x509_ext(x509, NID_basic_constraints, "critical,CA:TRUE");
+    add_x509_ext(x509, NID_key_usage, "critical,digitalSignature,keyCertSign,cRLSign,keyEncipherment");
+    add_x509_ext(x509, NID_ext_key_usage, "serverAuth,clientAuth");
+    add_x509_ext(x509, NID_subject_alt_name, "IP:192.168.29.195,IP:127.0.0.1,IP:0.0.0.0,DNS:192.168.29.195,DNS:localhost,DNS:JioFiberB2BUA,DNS:br.wln.ims.jio.com");
+
+    X509_sign(x509, pkey, EVP_sha256());
+
+    /* 1. Write Private Key */
+    BIO *bio_key = BIO_new_file(key_path.c_str(), "w");
+    if (bio_key) {
+        PEM_write_bio_PrivateKey(bio_key, pkey, NULL, NULL, 0, NULL, NULL);
+        BIO_free(bio_key);
+    }
+
+    /* 2. Write Public Certificate (PEM) */
+    BIO *bio_cert = BIO_new_file(cert_path.c_str(), "w");
+    if (bio_cert) {
+        PEM_write_bio_X509(bio_cert, x509);
+        BIO_free(bio_cert);
+    }
+
+    /* 3. Write CRT duplicate */
+    BIO *bio_crt = BIO_new_file("cert.crt", "w");
+    if (bio_crt) {
+        PEM_write_bio_X509(bio_crt, x509);
+        BIO_free(bio_crt);
+    }
+
+    /* 4. Write PKCS#12 bundle with password '1234' for Android/iOS KeyStore */
+    PKCS12 *p12 = PKCS12_create(
+        (char*)"1234",
+        (char*)"JioFiberB2BUA",
+        pkey,
+        x509,
+        NULL,
+        NID_pbe_WithSHA1And3_Key_TripleDES_CBC,
+        NID_pbe_WithSHA1And3_Key_TripleDES_CBC,
+        2048,
+        1,
+        0
+    );
+    if (p12) {
+        BIO *bio_p12 = BIO_new_file("cert.p12", "wb");
+        if (bio_p12) {
+            i2d_PKCS12_bio(bio_p12, p12);
+            BIO_free(bio_p12);
+        }
+        BIO *bio_pfx = BIO_new_file("cert.pfx", "wb");
+        if (bio_pfx) {
+            i2d_PKCS12_bio(bio_pfx, p12);
+            BIO_free(bio_pfx);
+        }
+        PKCS12_free(p12);
+    }
+
+    /* 5. Synchronize into certs/ directory */
+#ifdef _WIN32
+    CreateDirectoryA("certs", NULL);
+    CopyFileA(cert_path.c_str(), "certs\\cert.pem", FALSE);
+    CopyFileA(key_path.c_str(), "certs\\key.pem", FALSE);
+    CopyFileA("cert.crt", "certs\\cert.crt", FALSE);
+    CopyFileA("cert.p12", "certs\\cert.p12", FALSE);
+    CopyFileA("cert.pfx", "certs\\cert.pfx", FALSE);
+#else
+    mkdir("certs", 0755);
+    system("cp cert.pem key.pem cert.crt cert.p12 cert.pfx certs/ 2>/dev/null");
+    system("mkdir -p ~/Desktop/JioFiber_TLS_Certs && cp certs/* ~/Desktop/JioFiber_TLS_Certs/ 2>/dev/null");
+#endif
+
+    X509_free(x509);
+    EVP_PKEY_free(pkey);
+    std::cout << "[b2bua] Generated X.509v3 TLS certificates & Android PKCS#12 bundle in pure C++!\n";
+    std::cout << "[b2bua] -> cert.pem, cert.crt, cert.p12 (Password: '1234'), key.pem\n";
+    return true;
+}
 
 /* ------------------------------------------------------------------ */
 /* Cross-Platform HTTP/HTTPS Provisioner Engine                       */
@@ -357,21 +460,6 @@ static HttpResponse http_get_request(const std::string &host, uint16_t port, con
 #endif
 
 static bool run_cpp_otp_provisioner() {
-#ifdef _WIN32
-    HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
-    DWORD mode;
-    bool is_interactive = (hIn != INVALID_HANDLE_VALUE && GetConsoleMode(hIn, &mode));
-#else
-    bool is_interactive = (isatty(fileno(stdin)) != 0);
-#endif
-
-    if (!is_interactive) {
-        std::cerr << "\n[b2bua] Background Daemon Mode: Stdin is non-interactive.\n";
-        std::cerr << "[b2bua] Cannot prompt for OTP automatically in background service.\n";
-        std::cerr << "[b2bua] Run 'b2bua' interactively in terminal to provision credentials if needed.\n\n";
-        return false;
-    }
-
     std::cout << "\n===================================================\n";
     std::cout << "[b2bua] Native Cross-Platform C++ Standalone OTP Provisioner\n";
     std::cout << "===================================================\n\n";
@@ -449,9 +537,33 @@ static bool run_cpp_otp_provisioner() {
         return false;
     }
 
-    std::cout << "\n[b2bua] OTP Verified Successfully! Saving configuration to .env...\n";
+    std::cout << "\n[b2bua] OTP Verified Successfully!\n";
+    std::cout << "[b2bua] Local TLS Setup:\n";
+    std::cout << "  1) Disable Local TLS (UDP port 5061 only) [Default]\n";
+    std::cout << "  2) Enable Local TLS & generate brand new cert pair\n";
+    std::cout << "  3) Enable Local TLS & keep existing cert.pem from disk\n";
+    std::cout << "Select option [1, 2, or 3, default: 1]: ";
+    std::cout.flush();
 
-    std::string default_ip = "192.168.29.4";
+    std::string cert_choice;
+    if (std::cin.peek() == '\n') std::cin.get();
+    std::getline(std::cin, cert_choice);
+    cert_choice = trim(cert_choice);
+
+    std::string gen_new_flag = "0";
+    std::string enable_tls_flag = "0";
+
+    if (cert_choice == "2") {
+        enable_tls_flag = "1";
+        gen_new_flag = "1";
+    } else if (cert_choice == "3") {
+        enable_tls_flag = "1";
+        gen_new_flag = "0";
+    } else {
+        enable_tls_flag = "0";
+        gen_new_flag = "0";
+    }
+
     std::ofstream env_out(".env");
     if (!env_out.is_open()) return false;
 
@@ -459,8 +571,11 @@ static bool run_cpp_otp_provisioner() {
     env_out << "HOSTNAME_OVERRIDE=" << hostname << "\n";
     env_out << "UUID=" << uuid << "\n";
     env_out << "USER_AGENT=JSEAndrd-1.0\n";
-    env_out << "IPV4_ADDRESS=" << default_ip << "\n";
+    env_out << "IPV4_ADDRESS=192.168.29.195\n";
     env_out << "LOCAL_PORT=5061\n";
+    env_out << "LOCAL_TLS_PORT=5062\n";
+    env_out << "ENABLE_LOCAL_TLS=" << enable_tls_flag << "\n";
+    env_out << "GENERATE_NEW_TLS_CERT=" << gen_new_flag << "\n";
     env_out << "TLS_PORT=5068\n";
     env_out << "RTP_PORT=52000\n";
     env_out << "PUBLIC_ID=" << public_id << "\n";
@@ -612,8 +727,11 @@ static pj_status_t on_tx_msg_fix_contact(pjsip_tx_data *tdata) {
     }
     if (!have_local_ip) return PJ_SUCCESS; /* can't determine, leave as is */
 
-    pj_str_t local_host;
-    pj_strdup2(tdata->pool, &local_host, ip_str);
+    pj_str_t local_host = pj_str(ip_str);
+    /* Pool-dup so ptr stays valid after this function returns */
+    local_host = pj_str((char*)pj_pool_alloc(tdata->pool, local_host.slen + 1));
+    pj_memcpy(local_host.ptr, ip_str, strlen(ip_str) + 1);
+    local_host.slen = (pj_ssize_t)strlen(ip_str);
 
     pj_uint16_t local_port = (pj_uint16_t)tdata->tp_info.transport->local_name.port;
 
@@ -628,19 +746,38 @@ static pj_status_t on_tx_msg_fix_contact(pjsip_tx_data *tdata) {
     }
 
     /* 2. Rewrite SDP c=IN IP4 / o= if body is application/sdp */
-    if (tdata->msg->body &&
+    if (tdata->msg->body && tdata->msg->body->len > 0 &&
         pj_stricmp2(&tdata->msg->body->content_type.type,    "application") == 0 &&
         pj_stricmp2(&tdata->msg->body->content_type.subtype, "sdp") == 0) {
 
-        pjmedia_sdp_session *sdp_sess = (pjmedia_sdp_session*) tdata->msg->body->data;
-        if (sdp_sess) {
+        pjmedia_sdp_session *sdp_sess = NULL;
+        if (pjmedia_sdp_parse(tdata->pool,
+                              (char*)tdata->msg->body->data,
+                              tdata->msg->body->len,
+                              &sdp_sess) == PJ_SUCCESS && sdp_sess) {
+            bool modified = false;
             sdp_sess->origin.addr = local_host;
             if (sdp_sess->conn) {
                 sdp_sess->conn->addr = local_host;
+                modified = true;
             }
             for (unsigned mi = 0; mi < sdp_sess->media_count; ++mi) {
                 if (sdp_sess->media[mi]->conn) {
                     sdp_sess->media[mi]->conn->addr = local_host;
+                    modified = true;
+                }
+            }
+            if (modified || true /* always rebuild to pick up origin change */) {
+                char sdp_buf[2048];
+                int sdp_len = pjmedia_sdp_print(sdp_sess, sdp_buf, sizeof(sdp_buf));
+                if (sdp_len > 0) {
+                    char *new_data = (char*)pj_pool_alloc(tdata->pool, sdp_len + 1);
+                    if (new_data) {
+                        pj_memcpy(new_data, sdp_buf, sdp_len);
+                        new_data[sdp_len] = '\0';
+                        tdata->msg->body->data = new_data;
+                        tdata->msg->body->len  = sdp_len;
+                    }
                 }
             }
         }
@@ -657,8 +794,8 @@ static pjsip_module mod_b2bua_reg = {
     NULL, NULL, NULL, NULL,
     &on_rx_request_reg,
     NULL,
-    NULL,
-    NULL,
+    &on_tx_msg_fix_contact,
+    &on_tx_msg_fix_contact,
     NULL
 };
 
@@ -666,36 +803,37 @@ static pjsip_module mod_b2bua_reg = {
 /* Media bridging                                                     */
 /* ------------------------------------------------------------------ */
 
-/* Global static structures in .bss segment to guarantee 0 stack and 0 heap usage */
-static pjsua_call_info g_ci_1;
-static pjsua_call_info g_ci_2;
-static pjsua_acc_info  g_acc_info_buf;
-static pjsua_conf_port_info g_cpi_info;
-static std::recursive_mutex g_pjsip_cb_mutex;
-
 static void try_bridge(pjsua_call_id call_id) {
     if (call_id < 0 || call_id >= MAX_CALLS) return;
 
     pjsua_call_id peer = g_peer_map[call_id];
     if (peer == PJSUA_INVALID_ID) return;
 
-    if (pjsua_call_get_info(call_id, &g_ci_1) != PJ_SUCCESS) return;
-    if (pjsua_call_get_info(peer, &g_ci_2) != PJ_SUCCESS) return;
+    pjsua_call_info ci, peer_ci;
+    if (pjsua_call_get_info(call_id, &ci) != PJ_SUCCESS) return;
+    if (pjsua_call_get_info(peer, &peer_ci) != PJ_SUCCESS) return;
 
-    if (g_ci_1.media_cnt > 0 && g_ci_2.media_cnt > 0 &&
-        g_ci_1.media[0].type == PJMEDIA_TYPE_AUDIO &&
-        g_ci_2.media[0].type == PJMEDIA_TYPE_AUDIO &&
-        g_ci_1.media[0].status == PJSUA_CALL_MEDIA_ACTIVE &&
-        g_ci_2.media[0].status == PJSUA_CALL_MEDIA_ACTIVE) {
+    if (ci.media_cnt > 0 && peer_ci.media_cnt > 0 &&
+        ci.media[0].type == PJMEDIA_TYPE_AUDIO &&
+        peer_ci.media[0].type == PJMEDIA_TYPE_AUDIO &&
+        ci.media[0].status == PJSUA_CALL_MEDIA_ACTIVE &&
+        peer_ci.media[0].status == PJSUA_CALL_MEDIA_ACTIVE) {
 
-        pjsua_conf_port_id slot_a = g_ci_1.media[0].stream.aud.conf_slot;
-        pjsua_conf_port_id slot_b = g_ci_2.media[0].stream.aud.conf_slot;
+        pjsua_conf_port_id slot_a = ci.media[0].stream.aud.conf_slot;
+        pjsua_conf_port_id slot_b = peer_ci.media[0].stream.aud.conf_slot;
 
         if (slot_a != PJSUA_INVALID_ID && slot_b != PJSUA_INVALID_ID) {
-            if (pjsua_conf_get_port_info(slot_a, &g_cpi_info) == PJ_SUCCESS) {
+            /* Disconnect both call legs from local sound/null device (slot 0) to avoid mixing noise/drift */
+            pjsua_conf_disconnect(0, slot_a);
+            pjsua_conf_disconnect(slot_a, 0);
+            pjsua_conf_disconnect(0, slot_b);
+            pjsua_conf_disconnect(slot_b, 0);
+
+            pjsua_conf_port_info info_a;
+            if (pjsua_conf_get_port_info(slot_a, &info_a) == PJ_SUCCESS) {
                 bool connected = false;
-                for (unsigned i = 0; i < g_cpi_info.listener_cnt; ++i) {
-                    if (g_cpi_info.listeners[i] == slot_b) {
+                for (unsigned i = 0; i < info_a.listener_cnt; ++i) {
+                    if (info_a.listeners[i] == slot_b) {
                         connected = true;
                         break;
                     }
@@ -703,16 +841,50 @@ static void try_bridge(pjsua_call_id call_id) {
                 if (!connected) {
                     pjsua_conf_connect(slot_a, slot_b);
                     pjsua_conf_connect(slot_b, slot_a);
-                    PJ_LOG(3, (THIS_FILE, "Media bridged: slot %d <-> slot %d", slot_a, slot_b));
+                    PJ_LOG(3, (THIS_FILE, "Media bridged cleanly: slot %d <-> slot %d (isolated from sound dev)", slot_a, slot_b));
                 }
             }
         }
     }
 }
 
+static void audio_meter_thread() {
+    pj_thread_desc desc;
+    pj_thread_t *thread = NULL;
+    if (pj_thread_is_registered() == PJ_FALSE) {
+        pj_thread_register("audio_meter", desc, &thread);
+    }
+    while (g_running) {
+        Sleep(1000);
+        for (int i = 0; i < MAX_CALLS; ++i) {
+            pjsua_call_id peer = g_peer_map[i];
+            if (peer != PJSUA_INVALID_ID && i < peer) {
+                pjsua_call_info ci1, ci2;
+                if (pjsua_call_get_info(i, &ci1) == PJ_SUCCESS &&
+                    pjsua_call_get_info(peer, &ci2) == PJ_SUCCESS) {
+                    if (ci1.media_cnt > 0 && ci2.media_cnt > 0 &&
+                        ci1.media[0].status == PJSUA_CALL_MEDIA_ACTIVE &&
+                        ci2.media[0].status == PJSUA_CALL_MEDIA_ACTIVE) {
+                        unsigned tx1 = 0, rx1 = 0, tx2 = 0, rx2 = 0;
+                        pjsua_conf_port_id s1 = ci1.media[0].stream.aud.conf_slot;
+                        pjsua_conf_port_id s2 = ci2.media[0].stream.aud.conf_slot;
+                        if (s1 != PJSUA_INVALID_ID && s2 != PJSUA_INVALID_ID) {
+                            pjsua_conf_get_signal_level(s1, &tx1, &rx1);
+                            pjsua_conf_get_signal_level(s2, &tx2, &rx2);
+                            PJ_LOG(3, (THIS_FILE, "[AUDIO-LEVELS] Leg %d (slot %d) In=%u Out=%u <---> Leg %d (slot %d) In=%u Out=%u",
+                                       i, s1, rx1, tx1, peer, s2, rx2, tx2));
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#include <mutex>
 #define MAX_RAM_LOG_BYTES (512 * 1024) /* 512 KB RAM limit */
-static char g_ram_log_buf[MAX_RAM_LOG_BYTES];
-static size_t g_ram_log_len = 0;
+
+static std::string g_ram_log_buffer;
 static std::mutex g_ram_log_mutex;
 
 #ifdef _WIN32
@@ -734,7 +906,7 @@ static void win32_pipe_server_thread() {
                 {
                     std::lock_guard<std::mutex> lock(g_ram_log_mutex);
                     DWORD written = 0;
-                    WriteFile(hPipe, g_ram_log_buf, (DWORD)g_ram_log_len, &written, NULL);
+                    WriteFile(hPipe, g_ram_log_buffer.data(), (DWORD)g_ram_log_buffer.size(), &written, NULL);
                 }
                 while (g_running && g_hLogPipe == hPipe) {
                     Sleep(100);
@@ -766,20 +938,18 @@ static void custom_ram_log_writer(int level, const char *data, int len) {
 #endif
 
     std::lock_guard<std::mutex> lock(g_ram_log_mutex);
-    if (len >= MAX_RAM_LOG_BYTES) {
-        memcpy(g_ram_log_buf, data + (len - (MAX_RAM_LOG_BYTES - 1)), MAX_RAM_LOG_BYTES - 1);
-        g_ram_log_buf[MAX_RAM_LOG_BYTES - 1] = '\0';
-        g_ram_log_len = MAX_RAM_LOG_BYTES - 1;
-        return;
+    g_ram_log_buffer.append(data, len);
+
+    /* Enforce strict 512 KB RAM limit by trimming oldest log lines */
+    if (g_ram_log_buffer.size() > MAX_RAM_LOG_BYTES) {
+        size_t excess = g_ram_log_buffer.size() - MAX_RAM_LOG_BYTES;
+        auto nl = g_ram_log_buffer.find('\n', excess);
+        if (nl != std::string::npos) {
+            g_ram_log_buffer.erase(0, nl + 1);
+        } else {
+            g_ram_log_buffer.erase(0, excess);
+        }
     }
-    if (g_ram_log_len + len >= MAX_RAM_LOG_BYTES) {
-        size_t keep = MAX_RAM_LOG_BYTES / 2;
-        memmove(g_ram_log_buf, g_ram_log_buf + (g_ram_log_len - keep), keep);
-        g_ram_log_len = keep;
-    }
-    memcpy(g_ram_log_buf + g_ram_log_len, data, len);
-    g_ram_log_len += len;
-    g_ram_log_buf[g_ram_log_len] = '\0';
 }
 
 /* ------------------------------------------------------------------ */
@@ -787,53 +957,54 @@ static void custom_ram_log_writer(int level, const char *data, int len) {
 /* ------------------------------------------------------------------ */
 
 static void on_call_media_state(pjsua_call_id call_id) {
-    std::lock_guard<std::recursive_mutex> lock(g_pjsip_cb_mutex);
     try_bridge(call_id);
 }
 
 static void on_call_state(pjsua_call_id call_id, pjsip_event *e) {
+    pjsua_call_info ci;
     PJ_UNUSED_ARG(e);
+
     if (call_id < 0 || call_id >= MAX_CALLS) return;
 
-    std::lock_guard<std::recursive_mutex> lock(g_pjsip_cb_mutex);
+    pjsua_call_get_info(call_id, &ci);
+    PJ_LOG(3, (THIS_FILE, "Call %d state = %s", call_id, ci.state_text.ptr));
 
-    if (pjsua_call_get_info(call_id, &g_ci_1) != PJ_SUCCESS) return;
-    PJ_LOG(3, (THIS_FILE, "Call %d state = %.*s", call_id, (int)g_ci_1.state_text.slen, g_ci_1.state_text.ptr));
-
-    if (g_ci_1.state == PJSIP_INV_STATE_DISCONNECTED) {
+    if (ci.state == PJSIP_INV_STATE_DISCONNECTED) {
         PJ_LOG(3, (THIS_FILE, "Call %d disconnected (reason=%d %.*s)",
-                   call_id, g_ci_1.last_status,
-                   (int)g_ci_1.last_status_text.slen, g_ci_1.last_status_text.ptr));
+                   call_id, ci.last_status,
+                   (int)ci.last_status_text.slen, ci.last_status_text.ptr));
 
         pjsua_call_id peer = g_peer_map[call_id];
         if (peer != PJSUA_INVALID_ID) {
             g_peer_map[call_id] = PJSUA_INVALID_ID;
             g_peer_map[peer]    = PJSUA_INVALID_ID;
 
-            if (pjsua_call_get_info(peer, &g_ci_2) == PJ_SUCCESS &&
-                g_ci_2.state < PJSIP_INV_STATE_DISCONNECTED) {
-                unsigned code = (g_ci_1.last_status > 0) ? (unsigned)g_ci_1.last_status : 0;
-                PJ_LOG(3, (THIS_FILE, "Hanging up peer call %d (status=%d peer_state=%.*s)", peer, code, (int)g_ci_2.state_text.slen, g_ci_2.state_text.ptr));
-                pjsua_call_hangup(peer, code, NULL, NULL);
+            pjsua_call_info peer_ci;
+            if (pjsua_call_get_info(peer, &peer_ci) == PJ_SUCCESS &&
+                peer_ci.state < PJSIP_INV_STATE_DISCONNECTED) {
+                PJ_LOG(3, (THIS_FILE, "Hanging up peer call %d (peer_state=%s)", peer, peer_ci.state_text.ptr));
+                pjsua_call_hangup(peer, 0, NULL, NULL);
             }
         }
     }
-    else if (g_ci_1.state == PJSIP_INV_STATE_EARLY) {
+    else if (ci.state == PJSIP_INV_STATE_EARLY) {
         pjsua_call_id peer = g_peer_map[call_id];
         if (peer != PJSUA_INVALID_ID) {
-            if (pjsua_call_get_info(peer, &g_ci_2) == PJ_SUCCESS &&
-                g_ci_2.state < PJSIP_INV_STATE_EARLY) {
-                int code = (g_ci_1.last_status > 0) ? g_ci_1.last_status : 180;
+            pjsua_call_info peer_ci;
+            if (pjsua_call_get_info(peer, &peer_ci) == PJ_SUCCESS &&
+                peer_ci.state < PJSIP_INV_STATE_EARLY) {
+                int code = (ci.last_status > 0) ? ci.last_status : 180;
                 pjsua_call_answer(peer, code, NULL, NULL);
             }
         }
         try_bridge(call_id);
     }
-    else if (g_ci_1.state == PJSIP_INV_STATE_CONFIRMED) {
+    else if (ci.state == PJSIP_INV_STATE_CONFIRMED) {
         pjsua_call_id peer = g_peer_map[call_id];
         if (peer != PJSUA_INVALID_ID) {
-            if (pjsua_call_get_info(peer, &g_ci_2) == PJ_SUCCESS &&
-                g_ci_2.state < PJSIP_INV_STATE_CONFIRMED) {
+            pjsua_call_info peer_ci;
+            if (pjsua_call_get_info(peer, &peer_ci) == PJ_SUCCESS &&
+                peer_ci.state < PJSIP_INV_STATE_CONFIRMED) {
                 pjsua_call_answer(peer, 200, NULL, NULL);
             }
         }
@@ -843,16 +1014,14 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e) {
 
 static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
                              pjsip_rx_data *rdata) {
+    pjsua_call_info ci;
     PJ_UNUSED_ARG(rdata);
 
-    std::lock_guard<std::recursive_mutex> lock(g_pjsip_cb_mutex);
-
-    if (pjsua_call_get_info(call_id, &g_ci_1) != PJ_SUCCESS) return;
-
+    pjsua_call_get_info(call_id, &ci);
     PJ_LOG(3, (THIS_FILE, "Incoming call %d to %.*s from %.*s (acc %d)",
                call_id,
-               (int)g_ci_1.local_info.slen, g_ci_1.local_info.ptr,
-               (int)g_ci_1.remote_info.slen, g_ci_1.remote_info.ptr,
+               (int)ci.local_info.slen, ci.local_info.ptr,
+               (int)ci.remote_info.slen, ci.remote_info.ptr,
                acc_id));
 
     if (g_up_acc_id == PJSUA_INVALID_ID) {
@@ -862,11 +1031,12 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
     }
 
     /* Check if upstream account is actually registered (status 200) */
-    pjsua_acc_get_info(g_up_acc_id, &g_acc_info_buf);
-    if (g_acc_info_buf.status != 200) {
+    pjsua_acc_info up_ai;
+    pjsua_acc_get_info(g_up_acc_id, &up_ai);
+    if (up_ai.status != 200) {
         std::cout << "[b2bua] WARNING: Rejecting call - Upstream Jio IMS is not registered (status=" 
-                  << g_acc_info_buf.status << "). Please check router / registration." << std::endl;
-        PJ_LOG(1, (THIS_FILE, "Upstream account not registered (status=%d). Rejecting call 503.", g_acc_info_buf.status));
+                  << up_ai.status << "). Please check router / registration." << std::endl;
+        PJ_LOG(1, (THIS_FILE, "Upstream account not registered (status=%d). Rejecting call 503.", up_ai.status));
         pjsua_call_answer(call_id, 503, NULL, NULL);
         return;
     }
@@ -883,7 +1053,7 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
     std::string tmpl_clean = sanitize_sip_uri(tmpl_raw);
 
     if (dest.empty() && !tmpl_clean.empty()) {
-        std::string local_uri(g_ci_1.local_info.ptr, g_ci_1.local_info.slen);
+        std::string local_uri(ci.local_info.ptr, ci.local_info.slen);
         std::string user = local_uri;
 
         auto sip_pos = user.find("sip:");
@@ -933,8 +1103,7 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
     pj_pool_t *inv_pool = pjsua_pool_create("inv_hdrs", 1024, 1024);
     if (inv_pool) {
         pj_str_t pani_name = pj_str((char*)"P-Access-Network-Info");
-        pj_str_t pani_val;
-        pj_strdup2(inv_pool, &pani_val, "IEEE-802.11");
+        pj_str_t pani_val  = pj_str((char*)"IEEE-802.11");
         pjsip_generic_string_hdr *pani_hdr =
             pjsip_generic_string_hdr_create(inv_pool, &pani_name, &pani_val);
         if (pani_hdr) pj_list_push_back(&msg_data.hdr_list, (pjsip_hdr *)pani_hdr);
@@ -944,19 +1113,13 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
         if (ppi_str.front() != '<') ppi_str = "<" + ppi_str + ">";
 
         pj_str_t ppi_name = pj_str((char*)"P-Preferred-Identity");
-        pj_str_t ppi_val;
-        pj_strdup2(inv_pool, &ppi_val, ppi_str.c_str());
+        pj_str_t ppi_val  = pj_str((char*)ppi_str.c_str());
         pjsip_generic_string_hdr *ppi_hdr =
             pjsip_generic_string_hdr_create(inv_pool, &ppi_name, &ppi_val);
         if (ppi_hdr) pj_list_push_back(&msg_data.hdr_list, (pjsip_hdr *)ppi_hdr);
     }
 
-    pj_str_t dial_uri;
-    if (inv_pool) {
-        pj_strdup2(inv_pool, &dial_uri, clean_dest.c_str());
-    } else {
-        dial_uri = pj_str((char*)clean_dest.c_str());
-    }
+    pj_str_t dial_uri = pj_str((char*)clean_dest.c_str());
     pjsua_call_id out_id;
 
     pj_status_t status = pjsua_call_make_call(target_acc, &dial_uri,
@@ -987,68 +1150,44 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 static int g_consecutive_503_count = 0;
 
 static void on_reg_state(pjsua_acc_id acc_id) {
-    std::lock_guard<std::recursive_mutex> lock(g_pjsip_cb_mutex);
-    pjsua_acc_get_info(acc_id, &g_acc_info_buf);
+    pjsua_acc_info ai;
+    pjsua_acc_get_info(acc_id, &ai);
 
     PJ_LOG(3, (THIS_FILE, "Account %d reg status: %d (%.*s)",
-               acc_id, g_acc_info_buf.status,
-               (int)g_acc_info_buf.status_text.slen, g_acc_info_buf.status_text.ptr));
+               acc_id, ai.status,
+               (int)ai.status_text.slen, ai.status_text.ptr));
 
-    if (g_acc_info_buf.status == 200) {
+    if (ai.status == 200) {
         g_consecutive_503_count = 0;
         std::cout << "\n===================================================\n";
         std::cout << "[b2bua] SUCCESS: Registered with Jio IMS!\n";
         std::cout << "===================================================\n\n";
-    } else if (g_acc_info_buf.status == 403) {
+    } else if (ai.status == 403) {
         g_consecutive_503_count = 0;
         std::cout << "\n===================================================\n";
         std::cout << "[b2bua] ERROR 403: Device Not Whitelisted / Credentials Expired.\n";
-#ifndef _WIN32
-        bool is_interactive = (isatty(fileno(stdin)) != 0);
-#else
-        HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
-        DWORD mode;
-        bool is_interactive = (hIn != INVALID_HANDLE_VALUE && GetConsoleMode(hIn, &mode));
-#endif
-        if (is_interactive) {
-            std::cout << "[b2bua] Triggering OTP re-authentication flow...\n";
+        std::cout << "[b2bua] Triggering OTP re-authentication flow...\n";
+        std::cout << "===================================================\n\n";
+        trigger_otp_flow();
+        load_env_file(".env");
+        pjsua_acc_set_registration(acc_id, PJ_TRUE);
+    } else if (ai.status == 503 || ai.status == 500) {
+        g_consecutive_503_count++;
+        std::cout << "\n===================================================\n";
+        std::cout << "[b2bua] WARNING " << ai.status << ": Connection Refused / Service Unavailable by Jio Router (attempt " 
+                  << g_consecutive_503_count << ").\n";
+        if (g_consecutive_503_count >= 2) {
+            std::cout << "[b2bua] Router port 5068 is refusing connection. Re-triggering OTP whitelisting flow...\n";
             std::cout << "===================================================\n\n";
+            g_consecutive_503_count = 0;
             trigger_otp_flow();
             load_env_file(".env");
             pjsua_acc_set_registration(acc_id, PJ_TRUE);
         } else {
-            std::cout << "[b2bua] Background Service: Please verify .env or run 'b2bua' manually in a terminal to authenticate OTP.\n";
-            std::cout << "===================================================\n\n";
-        }
-    } else if (g_acc_info_buf.status == 503 || g_acc_info_buf.status == 500) {
-        g_consecutive_503_count++;
-        std::cout << "\n===================================================\n";
-        std::cout << "[b2bua] WARNING " << g_acc_info_buf.status << ": Connection Refused / Service Unavailable by Jio Router (attempt " 
-                  << g_consecutive_503_count << ").\n";
-        if (g_consecutive_503_count >= 2) {
-#ifndef _WIN32
-            bool is_interactive = (isatty(fileno(stdin)) != 0);
-#else
-            HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
-            DWORD mode;
-            bool is_interactive = (hIn != INVALID_HANDLE_VALUE && GetConsoleMode(hIn, &mode));
-#endif
-            if (is_interactive) {
-                std::cout << "[b2bua] Router port 5068 is refusing connection. Re-triggering OTP whitelisting flow...\n";
-                std::cout << "===================================================\n\n";
-                trigger_otp_flow();
-                load_env_file(".env");
-                pjsua_acc_set_registration(acc_id, PJ_TRUE);
-                g_consecutive_503_count = 0;
-            } else {
-                std::cout << "[b2bua] Router port 5068 unavailable. Will retry connection in background.\n";
-                std::cout << "===================================================\n\n";
-            }
-        } else {
             std::cout << "[b2bua] Will retry connection shortly. If persistent, check router IP or run OTP provisioner.\n";
             std::cout << "===================================================\n\n";
         }
-    } else if (g_acc_info_buf.status == 401) {
+    } else if (ai.status == 401) {
         std::cout << "[b2bua] Notice 401: Challenge received, sending MD5 credentials...\n";
     }
 }
@@ -1056,9 +1195,9 @@ static void on_reg_state(pjsua_acc_id acc_id) {
 static void set_codecs() {
     pj_str_t keep_amrwb = pj_str((char*)"AMR-WB");
     pj_str_t keep_amr   = pj_str((char*)"AMR");
-    pj_str_t keep_pcma  = pj_str((char*)"PCMA");
+    pj_str_t keep_l16   = pj_str((char*)"L16/8000");
     pj_str_t keep_pcmu  = pj_str((char*)"PCMU");
-    pj_str_t keep_tele  = pj_str((char*)"telephone-event");
+    pj_str_t keep_pcma  = pj_str((char*)"PCMA");
     
     pjsua_codec_info c[64];
     unsigned n = PJ_ARRAY_SIZE(c);
@@ -1070,14 +1209,23 @@ static void set_codecs() {
             pjsua_codec_set_priority(&c[i].codec_id, 255);
         else if (pj_strstr(&c[i].codec_id, &keep_amr))
             pjsua_codec_set_priority(&c[i].codec_id, 254);
-        else if (pj_strstr(&c[i].codec_id, &keep_pcma))
-            pjsua_codec_set_priority(&c[i].codec_id, 250);
+        else if (pj_strstr(&c[i].codec_id, &keep_l16))
+            pjsua_codec_set_priority(&c[i].codec_id, 252);
         else if (pj_strstr(&c[i].codec_id, &keep_pcmu))
+            pjsua_codec_set_priority(&c[i].codec_id, 250);
+        else if (pj_strstr(&c[i].codec_id, &keep_pcma))
             pjsua_codec_set_priority(&c[i].codec_id, 248);
-        else if (pj_strstr(&c[i].codec_id, &keep_tele))
-            pjsua_codec_set_priority(&c[i].codec_id, 200);
         else
             pjsua_codec_set_priority(&c[i].codec_id, 0);
+
+        pjmedia_codec_param param;
+        if (pjsua_codec_get_param(&c[i].codec_id, &param) == PJ_SUCCESS) {
+            param.setting.frm_per_pkt = 1; /* Strict 20ms single frame per packet - eliminates 40ms buffering robotic noise */
+            param.setting.vad = 0;
+            param.setting.cng = 0;
+            param.setting.plc = 1;
+            pjsua_codec_set_param(&c[i].codec_id, &param);
+        }
     }
 }
 
@@ -1163,19 +1311,22 @@ static int run_b2bua_server() {
     pjsua_media_config_default(&media_cfg);
     media_cfg.clock_rate = 8000;
     media_cfg.snd_clock_rate = 8000;
-    media_cfg.channel_count = 1;
     media_cfg.audio_frame_ptime = 20;
+    media_cfg.ptime = 20;
+    media_cfg.snd_auto_close_time = 0;
+    media_cfg.quality = 10;
+    media_cfg.ec_tail_len = 0;
     media_cfg.no_vad = PJ_TRUE;
-    media_cfg.has_ioqueue = PJ_TRUE;
+    media_cfg.jb_max = 300;
+    media_cfg.jb_min_pre = 20;
+    media_cfg.jb_init = 40;
+    media_cfg.jb_max_pre = 80;
 
     status = pjsua_init(&cfg, &log_cfg, &media_cfg);
     if (status != PJ_SUCCESS) {
         pjsua_destroy();
         return 1;
     }
-
-    pjmedia_codec_g711_init(pjsua_get_pjmedia_endpt());
-    pjmedia_codec_opencore_amr_init(pjsua_get_pjmedia_endpt(), 0);
 
 #ifdef _WIN32
     std::thread(win32_pipe_server_thread).detach();
@@ -1195,14 +1346,48 @@ static int run_b2bua_server() {
         return 1;
     }
 
-    /* TCP Transport (Local softphones fallback for large packets) */
-    pjsua_transport_id g_loc_tcp_tid = PJSUA_INVALID_ID;
-    pjsua_transport_config tcp_cfg;
-    pjsua_transport_config_default(&tcp_cfg);
-    tcp_cfg.port = local_port;
-    pjsua_transport_create(PJSIP_TRANSPORT_TCP, &tcp_cfg, &g_loc_tcp_tid);
+    /* Local TLS Transport (For local softphones on port 5062) */
+    std::string enable_loc_tls = get_env_def("ENABLE_LOCAL_TLS", "1");
+    if (enable_loc_tls != "0" && enable_loc_tls != "false" && enable_loc_tls != "off") {
+        pjsua_transport_config loc_tls_cfg;
+        pjsua_transport_config_default(&loc_tls_cfg);
+        int local_tls_port = std::stoi(get_env_def("LOCAL_TLS_PORT", "5062"));
+        loc_tls_cfg.port = local_tls_port;
+#if defined(PJSIP_TLSV1_2_METHOD)
+        loc_tls_cfg.tls_setting.method = PJSIP_TLSV1_2_METHOD;
+#endif
 
+        std::string tls_cert = get_env_def("TLS_CERT_FILE", "cert.pem");
+        std::string tls_key  = get_env_def("TLS_KEY_FILE", "key.pem");
+        std::string force_gen = get_env_def("GENERATE_NEW_TLS_CERT", "0");
 
+        if (force_gen == "1" || force_gen == "true" || !file_exists(tls_cert) || !file_exists(tls_key)) {
+            std::cout << "[b2bua] Generating new TLS certificate pair..." << std::endl;
+            generate_self_signed_cert(tls_cert, tls_key);
+        } else {
+            std::cout << "[b2bua] Using existing TLS certificate from disk: " << tls_cert << std::endl;
+        }
+
+        if (file_exists(tls_cert) && file_exists(tls_key)) {
+            loc_tls_cfg.tls_setting.cert_file = pj_str((char*)tls_cert.c_str());
+            loc_tls_cfg.tls_setting.privkey_file = pj_str((char*)tls_key.c_str());
+            std::cout << "[b2bua] -> Copy '" << tls_cert << "' to your phone to install manually into Linphone / Phone CA Store." << std::endl;
+        }
+
+        loc_tls_cfg.tls_setting.verify_server = PJ_FALSE;
+        loc_tls_cfg.tls_setting.verify_client = PJ_FALSE;
+
+        pj_status_t loc_tls_status = pjsua_transport_create(PJSIP_TRANSPORT_TLS, &loc_tls_cfg, &g_loc_tls_tid);
+        if (loc_tls_status != PJ_SUCCESS) {
+            std::cout << "[b2bua] ERROR: Failed to bind to Local TLS port " << local_tls_port << " (port already in use). Exiting." << std::endl;
+            PJ_LOG(1, (THIS_FILE, "Error creating Local SIP TLS transport on port %d", local_tls_port));
+            pjsua_destroy();
+            return 1;
+        }
+        std::cout << "[b2bua] Enabled Local TLS listener on port " << local_tls_port << std::endl;
+    } else {
+        std::cout << "[b2bua] Local TLS listener disabled (UDP port 5061 only)" << std::endl;
+    }
 
     /* TLS Transport (Jio Router Upstream) */
     pjsua_transport_config tls_cfg;
@@ -1233,6 +1418,7 @@ static int run_b2bua_server() {
 
     pjsua_set_null_snd_dev();
     set_codecs();
+    std::thread(audio_meter_thread).detach();
 
     /* Local Listener Account */
     pjsua_acc_config loc_acc_cfg;
@@ -1389,6 +1575,17 @@ int main(int argc, char *argv[]) {
         }
     }
 #endif
+
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--gen-cert" || arg == "--gen-certs" || arg == "-g") {
+            std::cout << "[b2bua] Generating fresh TLS certificates & PKCS#12 bundle in pure C++...\n";
+            std::string cert_file = get_env_def("TLS_CERT_FILE", "cert.pem");
+            std::string key_file  = get_env_def("TLS_KEY_FILE", "key.pem");
+            generate_self_signed_cert(cert_file, key_file);
+            return 0;
+        }
+    }
 
     return run_b2bua_server();
 }

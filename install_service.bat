@@ -13,6 +13,19 @@ if %errorlevel% neq 0 (
 
 set "EXE_PATH=%~dp0bin\windows-x64\b2bua_msvc.exe"
 
+:: Configure Windows Firewall Rules
+echo [*] Configuring Windows Firewall rules...
+netsh advfirewall firewall delete rule name="JioFiber B2BUA SIP UDP" 2>nul
+netsh advfirewall firewall add rule name="JioFiber B2BUA SIP UDP" dir=in action=allow protocol=UDP localport=5061
+netsh advfirewall firewall delete rule name="JioFiber B2BUA SIP TLS" 2>nul
+netsh advfirewall firewall add rule name="JioFiber B2BUA SIP TLS" dir=in action=allow protocol=TCP localport=5062
+netsh advfirewall firewall delete rule name="JioFiber B2BUA RTP Media UDP" 2>nul
+netsh advfirewall firewall add rule name="JioFiber B2BUA RTP Media UDP" dir=in action=allow protocol=UDP localport=4000-4050,52000-52200
+netsh advfirewall firewall delete rule name="JioFiber B2BUA App" 2>nul
+netsh advfirewall firewall add rule name="JioFiber B2BUA App" dir=in action=allow program="%EXE_PATH%" enable=yes
+echo [x] Firewall rules applied!
+echo.
+
 echo [*] Registering JioFiber B2BUA Scheduled Task at Windows Startup...
 
 schtasks /Create /TN "JioFiberB2BUA" /TR "\"%EXE_PATH%\"" /SC ONSTART /RU "SYSTEM" /RL HIGHEST /F

@@ -43,13 +43,15 @@ exact_excludes = {
     'silkg7221.c', 'sbc.c', 'plc_test.c', 'resample_test.c',
     'rtpdump.c', 'sdp_test.c', 'sip_rtp_test.c', 'sound_test.c',
     'tonegen_test.c', 'vid_port_test.c', 'b2bua.c', 'b2bua.cpp',
-    'ioqueue_select.c', 'ioqueue_dummy.c', 'ioqueue_common_abs.c', 'ioqueue_kqueue.c',
+    'ioqueue_select.c', 'ioqueue_dummy.c', 'ioqueue_common_abs.c', 'ioqueue_kqueue.c', 'ioqueue_winnt.c',
     'os_core_win32.c', 'os_timestamp_win32.c', 'os_error_win32.c', 'guid_win32.c',
     'ip_helper_winphone8.c', 'ip_helper_win32.c', 'os_time_bsd.c', 'os_time_darwin.c',
     'os_core_bsd.c', 'os_core_darwin.c', 'os_core_rtems.c', 'os_core_symbian.c', 'os_core_vxworks.c',
     'guid_android.c', 'guid_darwin.c', 'guid_bsd.c', 'guid_uuid.c',
     'extra-exports.c', 'log_writer_printk.c', 'pool_policy_kmalloc.c', 'sock_qos_wm.c',
-    'ssl_sock_imp_common.c', 'unittest.c', 'transport_srtp_sdes.c', 'transport_srtp_dtls.c', 'libresample_dll.c'
+    'ssl_sock_imp_common.c', 'unittest.c', 'transport_srtp_sdes.c', 'transport_srtp_dtls.c', 'libresample_dll.c',
+    'g722.c', 'gsm.c', 'ilbc.c', 'speex_codec.c', 'echo_speex.c', 'transport_srtp.c',
+    'os_rwmutex.c', 'scanner_cis_uint.c', 'scanner_cis_bitwise.c'
 }
 
 exclude_prefixes = ['test_', 'sample_']
@@ -72,7 +74,7 @@ for sd in subdirs:
                 c_files.append(os.path.join(dpath, f))
 
 inc_cmd = " ".join([f'-I"{d}"' for d in inc_dirs])
-defs = '-DPJ_LINUX=1 -DPJ_HAS_IPV6=1 -D_GNU_SOURCE -DPJ_HAS_NETINET_TCP_H=1 -DPJ_HAS_LIMITS_H=1 -DPJ_SOCK_HAS_INET_PTON=1 -DPJ_SOCK_HAS_INET_NTOP=1 -DPJ_SOCK_HAS_INET_ATON=1 -DPJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO=1 -DPJMEDIA_AUDIO_DEV_HAS_WMME=0 -DPJMEDIA_AUDIO_DEV_HAS_ALSA=0 -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=0 -DPJSIP_MAX_URL_SIZE=1024 -DPJMEDIA_HAS_OPENCORE_AMRNB_CODEC=0 -DPJMEDIA_HAS_G711_CODEC=1 -DPJMEDIA_HAS_G722_CODEC=1 -DPJMEDIA_HAS_GSM_CODEC=1'
+defs = '-DPJ_LINUX=1 -DPJ_HAS_IPV6=1 -D_GNU_SOURCE -DPJ_HAS_NETINET_TCP_H=1 -DPJ_HAS_LIMITS_H=1 -DPJ_SOCK_HAS_INET_PTON=1 -DPJ_SOCK_HAS_INET_NTOP=1 -DPJ_SOCK_HAS_INET_ATON=1 -DPJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO=1 -DPJMEDIA_AUDIO_DEV_HAS_WMME=0 -DPJMEDIA_AUDIO_DEV_HAS_ALSA=0 -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=0 -DPJSIP_MAX_URL_SIZE=1024 -DPJMEDIA_HAS_OPENCORE_AMRNB_CODEC=1 -DPJMEDIA_HAS_OPENCORE_AMRWB_CODEC=0 -DPJMEDIA_HAS_G711_CODEC=1 -DPJMEDIA_HAS_G722_CODEC=0 -DPJMEDIA_HAS_GSM_CODEC=0 -DPJMEDIA_HAS_SPEEX_CODEC=0 -DPJMEDIA_HAS_SPEEX_AEC=0 -DPJMEDIA_HAS_WEBRTC_AEC=0 -DPJMEDIA_HAS_WEBRTC_AEC3=0 -DPJMEDIA_HAS_ILBC_CODEC=0 -DPJMEDIA_HAS_SRTP=0'
 
 failed_files = []
 
@@ -103,7 +105,7 @@ print(f"Successfully compiled {len(valid_objs)} / {len(c_files)} Linux object fi
 
 obj_str = " ".join([f'"{vo}"' for vo in valid_objs])
 out_bin = os.path.join(root, 'b2bua')
-link_cmd = f'g++ -o "{out_bin}" {obj_str} -lssl -lcrypto -lpthread -lm'
+link_cmd = f'g++ -o "{out_bin}" {obj_str} -lopencore-amrnb -lssl -lcrypto -lpthread -lm'
 
 print("\nLinking native Linux executable b2bua...")
 res = subprocess.run(link_cmd, shell=True, capture_output=True, text=True)

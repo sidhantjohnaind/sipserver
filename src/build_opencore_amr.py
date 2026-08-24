@@ -14,15 +14,40 @@ root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 oc_root = os.path.join(root, 'third_party', 'opencore-amr')
 amr_base = os.path.join(oc_root, 'opencore', 'codecs_v2', 'audio', 'gsm_amr')
 
-cl_bin = r'D:\msvc\VC\Tools\MSVC\14.44.35207\bin\HostX64\x64\cl.exe'
-lib_bin = r'D:\msvc\VC\Tools\MSVC\14.44.35207\bin\HostX64\x64\lib.exe'
+def find_first_existing(paths):
+    for p in paths:
+        if os.path.exists(p):
+            return p
+    return paths[0]
+
+msvc_root = find_first_existing([
+    r'D:\msvc\VC\Tools\MSVC\14.44.35207',
+    r'D:\msvc\VC\Tools\MSVC\14.51.36231',
+    r'C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207'
+])
+
+cl_bin = os.path.join(msvc_root, 'bin', 'Hostx64', 'x64', 'cl.exe')
+lib_bin = os.path.join(msvc_root, 'bin', 'Hostx64', 'x64', 'lib.exe')
+
+sdk_root = find_first_existing([
+    r'F:\Program Files (x86)\Windows Kits\10',
+    r'C:\Program Files (x86)\Windows Kits\10',
+    r'D:\Windows Kits\10'
+])
+
+sdk_ver = '10.0.26100.0'
+inc_ver_dir = os.path.join(sdk_root, 'Include')
+if os.path.exists(inc_ver_dir):
+    vers = [v for v in os.listdir(inc_ver_dir) if v.startswith('10.')]
+    if vers:
+        sdk_ver = sorted(vers)[-1]
 
 # MSVC system includes
 sys_inc = [
-    r'D:\msvc\VC\Tools\MSVC\14.44.35207\include',
-    r'C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt',
-    r'C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um',
-    r'C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\shared',
+    os.path.join(msvc_root, 'include'),
+    os.path.join(sdk_root, 'Include', sdk_ver, 'ucrt'),
+    os.path.join(sdk_root, 'Include', sdk_ver, 'um'),
+    os.path.join(sdk_root, 'Include', sdk_ver, 'shared'),
 ]
 
 oscl_dir = os.path.join(oc_root, 'oscl')
@@ -124,11 +149,11 @@ def compile_file(args):
     base = os.path.basename(src).replace('.cpp', '.obj')
     obj = os.path.join(obj_dir, f'{prefix}_{idx}_{base}')
     inc_cmd = ' '.join(f'/I"{d}"' for d in inc_dirs)
-    # Compile as C++ with /TP, suppress warnings with /W0
-    cmd = f'"{cl_bin}" /c /O2 /nologo /W0 /EHsc /TP {inc_cmd} "{src}" /Fo"{obj}"'
+    # Compile as C++ with /TP, suppress warnings with /W0, /O1 /fp:precise for bit-exact fixed-point DSP
+    cmd = f'"{cl_bin}" /c /O1 /fp:precise /nologo /W0 /EHsc /TP {inc_cmd} "{src}" /Fo"{obj}"'
     r = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     if r.returncode != 0:
-        print(f"  FAIL: {os.path.basename(src)}: {r.stderr[:150]}")
+        print(f"\n  FAIL: {os.path.basename(src)}:\nERR: {r.stderr}\nOUT: {r.stdout}\n")
         return None
     return obj
 
