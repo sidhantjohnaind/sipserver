@@ -119,13 +119,13 @@ jobs:
 
       - name: Install RISC-V 64 Cross Compiler & OpenSSL
         run: |
-          sudo dpkg --add-architecture riscv64
-          sudo sed -i 's/Types: deb/Types: deb\nArchitectures: amd64/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
-          echo "deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports noble main universe" | sudo tee /etc/apt/sources.list.d/riscv64.list
-          echo "deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports noble-updates main universe" | sudo tee -a /etc/apt/sources.list.d/riscv64.list
-          echo "deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports noble-security main universe" | sudo tee -a /etc/apt/sources.list.d/riscv64.list
           sudo apt-get update
-          sudo apt-get install -y gcc-riscv64-linux-gnu g++-riscv64-linux-gnu libssl-dev:riscv64
+          sudo apt-get install -y gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
+          mkdir -p /tmp/riscv64_sysroot
+          curl -fsSL "http://ports.ubuntu.com/pool/main/o/openssl/libssl3t64_3.0.13-0ubuntu3.13_riscv64.deb" -o /tmp/libssl3.deb
+          curl -fsSL "http://ports.ubuntu.com/pool/main/o/openssl/libssl-dev_3.0.13-0ubuntu3.13_riscv64.deb" -o /tmp/libssl-dev.deb
+          dpkg-deb -x /tmp/libssl3.deb /tmp/riscv64_sysroot
+          dpkg-deb -x /tmp/libssl-dev.deb /tmp/riscv64_sysroot
 
       - name: Build Linux riscv64 Binary
         run: |
