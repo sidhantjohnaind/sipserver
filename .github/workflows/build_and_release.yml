@@ -124,12 +124,9 @@ jobs:
 
       - name: Build Linux riscv64 Binary
         run: |
-          python3 src/build_riscv64.py || true
+          python3 src/build_riscv64.py
           mkdir -p bin/linux-riscv64
-          if [ -f b2bua-riscv64 ]; then
-            cp b2bua-riscv64 bin/linux-riscv64/b2bua
-            cp b2bua-riscv64 b2bua-linux-riscv64
-          elif [ -f bin/linux-riscv64/b2bua ]; then
+          if [ -f bin/linux-riscv64/b2bua ]; then
             cp bin/linux-riscv64/b2bua b2bua-linux-riscv64
           fi
 
