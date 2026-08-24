@@ -47,7 +47,7 @@ if [ -f "$LOCAL_BIN" ]; then
     cp "$LOCAL_BIN" "$TARGET_BIN"
 elif [ ! -f "$TARGET_BIN" ]; then
     echo "[*] Downloading pre-built $BIN_NAME binary from GitHub Releases..."
-    curl -sSL "https://github.com/sidhantjohnaind/sipserver/releases/download/v1.0.0/$BIN_NAME" -o "$TARGET_BIN"
+    curl -sSL "https://github.com/sidhantjohnaind/sipserver/releases/download/v1.3.0/$BIN_NAME" -o "$TARGET_BIN"
 fi
 
 if [ -d "$LOCAL_LIB" ]; then
