@@ -111,7 +111,7 @@ out_exe = os.path.join(output_dir, 'b2bua')
 
 print("\nLinking native Linux RISC-V 64 executable b2bua...")
 objs_str = " ".join([f'"{o}"' for o in valid_objs])
-link_cmd = f'riscv64-linux-gnu-g++ {objs_str} -o "{out_exe}" -L/usr/riscv64-linux-gnu/lib -L/usr/lib/riscv64-linux-gnu -L/tmp/riscv64_sysroot/usr/lib/riscv64-linux-gnu -lssl -lcrypto -lpthread -lm'
+link_cmd = f'riscv64-linux-gnu-g++ {objs_str} -o "{out_exe}" -L/usr/riscv64-linux-gnu/lib -L/usr/lib/riscv64-linux-gnu -L/tmp/riscv64_sysroot/usr/lib/riscv64-linux-gnu -lssl -lcrypto -lpthread -lm -ldl'
 
 res = subprocess.run(link_cmd, shell=True, capture_output=True, text=True)
 if res.returncode != 0:
