@@ -122,8 +122,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
           mkdir -p /tmp/riscv64_sysroot
-          curl -fsSL "http://ports.ubuntu.com/pool/main/o/openssl/libssl3t64_3.0.13-0ubuntu3.13_riscv64.deb" -o /tmp/libssl3.deb
-          curl -fsSL "http://ports.ubuntu.com/pool/main/o/openssl/libssl-dev_3.0.13-0ubuntu3.13_riscv64.deb" -o /tmp/libssl-dev.deb
+          curl -fsSL "http://ports.ubuntu.com/pool/main/o/openssl/libssl3t64_3.4.1-1ubuntu4_riscv64.deb" -o /tmp/libssl3.deb
+          curl -fsSL "http://ports.ubuntu.com/pool/main/o/openssl/libssl-dev_3.4.1-1ubuntu4_riscv64.deb" -o /tmp/libssl-dev.deb
           dpkg-deb -x /tmp/libssl3.deb /tmp/riscv64_sysroot
           dpkg-deb -x /tmp/libssl-dev.deb /tmp/riscv64_sysroot
 
