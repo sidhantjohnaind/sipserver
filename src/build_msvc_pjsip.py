@@ -24,47 +24,41 @@ def find_first_existing(paths, check_subpath=None):
             return p
     return paths[0]
 
-which_cl = shutil.which('cl.exe')
-which_link = shutil.which('link.exe')
+msvc_root = find_first_existing([
+    r'D:\msvc\VC\Tools\MSVC\14.44.35207',
+    r'D:\msvc\VC\Tools\MSVC\14.51.36231',
+    r'C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207',
+    r'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC\14.44.35207'
+], check_subpath=r'bin\Hostx64\x64\cl.exe')
 
-if which_cl and which_link:
-    cl_bin = 'cl.exe'
-    link_bin = 'link.exe'
-    msvc_inc = []
-    msvc_lib = []
-else:
-    msvc_root = find_first_existing([
-        r'D:\msvc\VC\Tools\MSVC\14.44.35207',
-        r'D:\msvc\VC\Tools\MSVC\14.51.36231',
-        r'C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207'
-    ], check_subpath=r'bin\Hostx64\x64\cl.exe')
+cl_bin = shutil.which('cl.exe') or os.path.join(msvc_root, 'bin', 'Hostx64', 'x64', 'cl.exe')
+link_bin = shutil.which('link.exe') or os.path.join(msvc_root, 'bin', 'Hostx64', 'x64', 'link.exe')
 
-    cl_bin = os.path.join(msvc_root, 'bin', 'Hostx64', 'x64', 'cl.exe')
-    link_bin = os.path.join(msvc_root, 'bin', 'Hostx64', 'x64', 'link.exe')
+sdk_root = find_first_existing([
+    r'F:\Program Files (x86)\Windows Kits\10',
+    r'C:\Program Files (x86)\Windows Kits\10',
+    r'D:\Windows Kits\10'
+], check_subpath='Include')
 
-    sdk_root = find_first_existing([
-        r'C:\Program Files (x86)\Windows Kits\10',
-        r'F:\Program Files (x86)\Windows Kits\10',
-        r'D:\Windows Kits\10'
-    ], check_subpath='Include')
+sdk_ver = '10.0.26100.0'
+inc_ver_dir = os.path.join(sdk_root, 'Include')
+if os.path.exists(inc_ver_dir):
+    vers = [v for v in os.listdir(inc_ver_dir) if v.startswith('10.')]
+    if vers:
+        sdk_ver = sorted(vers)[-1]
 
-    sdk_ver = '10.0.26100.0'
-    inc_ver_dir = os.path.join(sdk_root, 'Include')
-    if os.path.exists(inc_ver_dir):
-        vers = [v for v in os.listdir(inc_ver_dir) if v.startswith('10.')]
-        if vers:
-            sdk_ver = sorted(vers)[-1]
-    msvc_inc = [
-        os.path.join(msvc_root, 'include'),
-        os.path.join(sdk_root, 'Include', sdk_ver, 'ucrt'),
-        os.path.join(sdk_root, 'Include', sdk_ver, 'um'),
-        os.path.join(sdk_root, 'Include', sdk_ver, 'shared'),
-    ]
-    msvc_lib = [
-        os.path.join(msvc_root, 'lib', 'x64'),
-        os.path.join(sdk_root, 'Lib', sdk_ver, 'ucrt', 'x64'),
-        os.path.join(sdk_root, 'Lib', sdk_ver, 'um', 'x64'),
-    ]
+msvc_inc = [p for p in [
+    os.path.join(msvc_root, 'include'),
+    os.path.join(sdk_root, 'Include', sdk_ver, 'ucrt'),
+    os.path.join(sdk_root, 'Include', sdk_ver, 'um'),
+    os.path.join(sdk_root, 'Include', sdk_ver, 'shared'),
+] if os.path.exists(p)]
+
+msvc_lib = [p for p in [
+    os.path.join(msvc_root, 'lib', 'x64'),
+    os.path.join(sdk_root, 'Lib', sdk_ver, 'ucrt', 'x64'),
+    os.path.join(sdk_root, 'Lib', sdk_ver, 'um', 'x64'),
+] if os.path.exists(p)]
 
 ssl_root = find_first_existing([
     os.environ.get('OPENSSL_ROOT_DIR', ''),

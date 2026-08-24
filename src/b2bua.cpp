@@ -613,9 +613,7 @@ static void ensure_env_configured() {
     }
 }
 
-/* ------------------------------------------------------------------ */
-/* Custom SIP Module for softphone REGISTER handling                  */
-/* ------------------------------------------------------------------ */
+static std::string g_registered_softphone_contact;
 
 static pj_bool_t on_rx_request_reg(pjsip_rx_data *rdata) {
     pjsip_msg *msg = rdata->msg_info.msg;
@@ -636,6 +634,25 @@ static pj_bool_t on_rx_request_reg(pjsip_rx_data *rdata) {
         pj_strcmp2(&msg->line.req.method.name, "SUBSCRIBE") == 0 || 
         pj_strcmp2(&msg->line.req.method.name, "OPTIONS") == 0 ||
         pj_strcmp2(&msg->line.req.method.name, "PUBLISH") == 0) {
+        
+        /* Save registered softphone contact for incoming call routing */
+        if (method == PJSIP_REGISTER_METHOD) {
+            pjsip_contact_hdr *c_hdr = (pjsip_contact_hdr*) pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT, NULL);
+            if (c_hdr && c_hdr->uri) {
+                char uri_buf[256];
+                int uri_len = pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR, c_hdr->uri, uri_buf, sizeof(uri_buf) - 1);
+                if (uri_len > 0) {
+                    uri_buf[uri_len] = '\0';
+                    g_registered_softphone_contact = sanitize_sip_uri(uri_buf);
+                    PJ_LOG(3, (THIS_FILE, "[b2bua] Softphone registered contact: %s", g_registered_softphone_contact.c_str()));
+                }
+            } else if (rdata->pkt_info.src_name) {
+                char src_buf[128];
+                pj_ansi_snprintf(src_buf, sizeof(src_buf), "sip:100@%s:%d", rdata->pkt_info.src_name, rdata->pkt_info.src_port);
+                g_registered_softphone_contact = src_buf;
+                PJ_LOG(3, (THIS_FILE, "[b2bua] Softphone registered from src: %s", g_registered_softphone_contact.c_str()));
+            }
+        }
         
         pjsip_tx_data *tdata = nullptr;
         pjsip_contact_hdr *req_contact = nullptr;
@@ -1024,6 +1041,54 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
                (int)ci.remote_info.slen, ci.remote_info.ptr,
                acc_id));
 
+    /* CASE 1: INCOMING CALL FROM JIO IMS -> Ring Local Softphone */
+    if (acc_id == g_up_acc_id) {
+        PJ_LOG(3, (THIS_FILE, "[b2bua] Incoming call from Jio IMS - routing to local softphone"));
+
+        std::string dest = get_env_def("DEST_TO_LOCAL", "");
+        if (dest.empty()) {
+            if (!g_registered_softphone_contact.empty()) {
+                dest = g_registered_softphone_contact;
+            } else {
+                dest = "sip:100@127.0.0.1:5060";
+            }
+        }
+
+        std::string clean_dest = sanitize_sip_uri(dest);
+        if (clean_dest.front() != '<') clean_dest = "<" + clean_dest + ">";
+
+        PJ_LOG(3, (THIS_FILE, "Ringing local softphone: %s", clean_dest.c_str()));
+        pjsua_call_answer(call_id, 180, NULL, NULL);
+
+        pjsua_call_setting call_opt;
+        pjsua_call_setting_default(&call_opt);
+        call_opt.aud_cnt = 1;
+        call_opt.vid_cnt = 0;
+
+        pj_str_t dial_uri = pj_str((char*)clean_dest.c_str());
+        pjsua_call_id out_id;
+
+        pj_status_t status = pjsua_call_make_call(g_loc_acc_id, &dial_uri,
+                                                  &call_opt, NULL, NULL, &out_id);
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(1, (THIS_FILE, "Failed to ring softphone %s (status=%d)", clean_dest.c_str(), status));
+            pjsua_call_hangup(call_id, 486, NULL, NULL);
+            return;
+        }
+
+        if (call_id >= 0 && call_id < MAX_CALLS &&
+            out_id >= 0 && out_id < MAX_CALLS) {
+            g_peer_map[call_id] = out_id;
+            g_peer_map[out_id]  = call_id;
+            PJ_LOG(3, (THIS_FILE, "Mapped Jio IMS call %d <-> Softphone call %d", call_id, out_id));
+        } else {
+            pjsua_call_hangup(out_id, 500, NULL, NULL);
+            pjsua_call_hangup(call_id, 500, NULL, NULL);
+        }
+        return;
+    }
+
+    /* CASE 2: OUTGOING CALL FROM LOCAL SOFTPHONE -> Dial Out via Jio IMS */
     if (g_up_acc_id == PJSUA_INVALID_ID) {
         PJ_LOG(1, (THIS_FILE, "Upstream account not initialized. Rejecting call."));
         pjsua_call_answer(call_id, 503, NULL, NULL);
