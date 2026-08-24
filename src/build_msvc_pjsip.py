@@ -24,29 +24,51 @@ def find_first_existing(paths, check_subpath=None):
             return p
     return paths[0]
 
-msvc_root = find_first_existing([
-    r'D:\msvc\VC\Tools\MSVC\14.44.35207',
-    r'D:\msvc\VC\Tools\MSVC\14.51.36231',
-    r'C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207'
-], check_subpath=r'bin\Hostx64\x64\cl.exe')
+which_cl = shutil.which('cl.exe')
+which_link = shutil.which('link.exe')
 
-cl_bin = os.path.join(msvc_root, 'bin', 'Hostx64', 'x64', 'cl.exe')
-link_bin = os.path.join(msvc_root, 'bin', 'Hostx64', 'x64', 'link.exe')
+if which_cl and which_link:
+    cl_bin = 'cl.exe'
+    link_bin = 'link.exe'
+    msvc_inc = []
+    msvc_lib = []
+else:
+    msvc_root = find_first_existing([
+        r'D:\msvc\VC\Tools\MSVC\14.44.35207',
+        r'D:\msvc\VC\Tools\MSVC\14.51.36231',
+        r'C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207'
+    ], check_subpath=r'bin\Hostx64\x64\cl.exe')
 
-sdk_root = find_first_existing([
-    r'C:\Program Files (x86)\Windows Kits\10',
-    r'F:\Program Files (x86)\Windows Kits\10',
-    r'D:\Windows Kits\10'
-], check_subpath='Include')
+    cl_bin = os.path.join(msvc_root, 'bin', 'Hostx64', 'x64', 'cl.exe')
+    link_bin = os.path.join(msvc_root, 'bin', 'Hostx64', 'x64', 'link.exe')
 
-sdk_ver = '10.0.26100.0'
-inc_ver_dir = os.path.join(sdk_root, 'Include')
-if os.path.exists(inc_ver_dir):
-    vers = [v for v in os.listdir(inc_ver_dir) if v.startswith('10.')]
-    if vers:
-        sdk_ver = sorted(vers)[-1]
+    sdk_root = find_first_existing([
+        r'C:\Program Files (x86)\Windows Kits\10',
+        r'F:\Program Files (x86)\Windows Kits\10',
+        r'D:\Windows Kits\10'
+    ], check_subpath='Include')
+
+    sdk_ver = '10.0.26100.0'
+    inc_ver_dir = os.path.join(sdk_root, 'Include')
+    if os.path.exists(inc_ver_dir):
+        vers = [v for v in os.listdir(inc_ver_dir) if v.startswith('10.')]
+        if vers:
+            sdk_ver = sorted(vers)[-1]
+    msvc_inc = [
+        os.path.join(msvc_root, 'include'),
+        os.path.join(sdk_root, 'Include', sdk_ver, 'ucrt'),
+        os.path.join(sdk_root, 'Include', sdk_ver, 'um'),
+        os.path.join(sdk_root, 'Include', sdk_ver, 'shared'),
+    ]
+    msvc_lib = [
+        os.path.join(msvc_root, 'lib', 'x64'),
+        os.path.join(sdk_root, 'Lib', sdk_ver, 'ucrt', 'x64'),
+        os.path.join(sdk_root, 'Lib', sdk_ver, 'um', 'x64'),
+    ]
 
 ssl_root = find_first_existing([
+    os.environ.get('OPENSSL_ROOT_DIR', ''),
+    r'C:\Program Files\OpenSSL',
     r'C:\Program Files\OpenSSL-Win64',
     r'D:\Program Files\OpenSSL-Win64',
     r'F:\Program Files\OpenSSL-Win64'
@@ -66,19 +88,13 @@ inc_dirs = [
     os.path.join(pj_dir, 'third_party', 'resample', 'src'),
     oc_amr_inc,
     os.path.join(ssl_root, 'include'),
-    os.path.join(msvc_root, 'include'),
-    os.path.join(sdk_root, 'Include', sdk_ver, 'ucrt'),
-    os.path.join(sdk_root, 'Include', sdk_ver, 'um'),
-    os.path.join(sdk_root, 'Include', sdk_ver, 'shared'),
-]
+] + msvc_inc
 
 oc_amr_lib = os.path.join(root, 'third_party', 'opencore-amr', 'lib')
 
-lib_dirs = [
-    os.path.join(msvc_root, 'lib', 'x64'),
-    os.path.join(sdk_root, 'Lib', sdk_ver, 'ucrt', 'x64'),
-    os.path.join(sdk_root, 'Lib', sdk_ver, 'um', 'x64'),
+lib_dirs = msvc_lib + [
     os.path.join(ssl_root, 'lib', 'VC', 'x64', 'MD'),
+    os.path.join(ssl_root, 'lib'),
     oc_amr_lib,
 ]
 

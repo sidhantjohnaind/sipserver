@@ -20,35 +20,42 @@ def find_first_existing(paths):
             return p
     return paths[0]
 
-msvc_root = find_first_existing([
-    r'D:\msvc\VC\Tools\MSVC\14.44.35207',
-    r'D:\msvc\VC\Tools\MSVC\14.51.36231',
-    r'C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207'
-])
+which_cl = shutil.which('cl.exe')
+which_lib = shutil.which('lib.exe')
 
-cl_bin = os.path.join(msvc_root, 'bin', 'Hostx64', 'x64', 'cl.exe')
-lib_bin = os.path.join(msvc_root, 'bin', 'Hostx64', 'x64', 'lib.exe')
+if which_cl and which_lib:
+    cl_bin = 'cl.exe'
+    lib_bin = 'lib.exe'
+    sys_inc = []
+else:
+    msvc_root = find_first_existing([
+        r'D:\msvc\VC\Tools\MSVC\14.44.35207',
+        r'D:\msvc\VC\Tools\MSVC\14.51.36231',
+        r'C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207'
+    ])
+    cl_bin = os.path.join(msvc_root, 'bin', 'Hostx64', 'x64', 'cl.exe')
+    lib_bin = os.path.join(msvc_root, 'bin', 'Hostx64', 'x64', 'lib.exe')
 
-sdk_root = find_first_existing([
-    r'F:\Program Files (x86)\Windows Kits\10',
-    r'C:\Program Files (x86)\Windows Kits\10',
-    r'D:\Windows Kits\10'
-])
+    sdk_root = find_first_existing([
+        r'F:\Program Files (x86)\Windows Kits\10',
+        r'C:\Program Files (x86)\Windows Kits\10',
+        r'D:\Windows Kits\10'
+    ])
 
-sdk_ver = '10.0.26100.0'
-inc_ver_dir = os.path.join(sdk_root, 'Include')
-if os.path.exists(inc_ver_dir):
-    vers = [v for v in os.listdir(inc_ver_dir) if v.startswith('10.')]
-    if vers:
-        sdk_ver = sorted(vers)[-1]
+    sdk_ver = '10.0.26100.0'
+    inc_ver_dir = os.path.join(sdk_root, 'Include')
+    if os.path.exists(inc_ver_dir):
+        vers = [v for v in os.listdir(inc_ver_dir) if v.startswith('10.')]
+        if vers:
+            sdk_ver = sorted(vers)[-1]
 
-# MSVC system includes
-sys_inc = [
-    os.path.join(msvc_root, 'include'),
-    os.path.join(sdk_root, 'Include', sdk_ver, 'ucrt'),
-    os.path.join(sdk_root, 'Include', sdk_ver, 'um'),
-    os.path.join(sdk_root, 'Include', sdk_ver, 'shared'),
-]
+    # MSVC system includes
+    sys_inc = [
+        os.path.join(msvc_root, 'include'),
+        os.path.join(sdk_root, 'Include', sdk_ver, 'ucrt'),
+        os.path.join(sdk_root, 'Include', sdk_ver, 'um'),
+        os.path.join(sdk_root, 'Include', sdk_ver, 'shared'),
+    ]
 
 oscl_dir = os.path.join(oc_root, 'oscl')
 
