@@ -8,14 +8,12 @@ No Docker. No Asterisk. No cloud. Runs as a single binary.
 
 ## Features
 
-- **Zero-dependency binary** — single executable for Windows, Linux x86_64, and Linux ARM64
+- **Zero-dependency binary** — single executable for Windows, Linux x86_64, Linux ARM64, and RISC-V 64
 - **Embedded Native OTP Provisioner** — automatically requests OTP and provisions credentials directly from your Jio router without needing Python
-- **Dual Transport Support (UDP & TLS)**:
-  - Local Listener: Standard UDP (`5061`) + Encrypted TLS (`5062` / `LOCAL_TLS_PORT`) for softphones
-  - Upstream Transport: TLS v1.2 (`5068`) to Jio IMS router/ONT
-- **Local TLS Auto Certificate Generator**: Automatically creates 10-year 2048-bit RSA self-signed `cert.pem` and `key.pem` files on disk for encrypted softphone signaling
-- **Strict Port Binding**: Binds directly to `5061` and `5062` and exits immediately if either port is in use
-- **Automatic SIP registration** with Jio IMS over TLS with self-healing credential rotation recovery
+- **Standard SIP UDP Transport**: Listens on UDP port `5061` for all softphones (MicroSIP, Linphone, GS Wave, etc.)
+- **Upstream Carrier TLS Transport**: Secure TLS v1.2 (`5068`) to Jio IMS router/ONT
+- **Strict Port Binding**: Binds cleanly to `5061` and exits immediately if port is occupied
+- **Automatic SIP registration** with Jio IMS with self-healing credential rotation recovery
 - **Full call flow bridging** — outgoing calls, incoming calls, BYE, CANCEL, re-INVITE
 - **Multi-network support** — LAN, Tailscale, ZeroTier, WireGuard, OpenVPN
   - Per-call dynamic source IP detection using OS kernel routing table (`getsockname` connect trick)
@@ -24,7 +22,7 @@ No Docker. No Asterisk. No cloud. Runs as a single binary.
 - **Robust Teardown Handling** — clean SIP `CANCEL` & `BYE` handling without double-hangup assertions
 - **PUBLISH / presence** passthrough for softphone status
 - **Zero SSD wear logging** — 512 KB RAM ring-buffer + Windows Named Pipe (`\\.\pipe\jio_b2bua_logs`)
-- **Codec support** — AMR-NB (octet-aligned mode-set), PCMA, PCMU, telephone-event DTMF
+- **Codec support** — Native AMR-WB (16 kHz), AMR-NB (8 kHz), PCMA, PCMU, telephone-event DTMF
 
 ---
 
@@ -84,84 +82,7 @@ The provisioner is **built directly into the binary (100% pure C++)**. Simply la
 
 - When launched for the first time, it prompts for your Jio router IP (usually `192.168.29.1`).
 - Enter the OTP sent to your registered Jio mobile number.
-- Prompt for Local TLS Certificate Setup:
-  - **Option 1**: Generate a brand new TLS certificate pair (`JioFiberB2BUA.pem` & `JioFiberB2BUA.key`).
-  - **Option 2**: Keep & use existing certificates from disk.
-  - **Option 3 [Default]**: Disable Local TLS (pure UDP port 5061 only mode).
 - It automatically whitelists your device, fetches your SIP credentials, and saves `.env`.
-
----
-
-### Dual Transport & Certificate Setup for Softphones (Linphone / Zoiper) & Local HTTPS Web Servers
-
-The generated certificates have full **X.509 v3 `CA:TRUE`** capabilities with broad **`/24` Subject Alternative Name (SAN)** coverage for all common home router subnets (`192.168.29.1–254`, `192.168.0–3.x`, `192.168.31.x`, `10.0.0.x`). A single certificate works across any device IP without ever needing regeneration!
-
-#### 🛠️ 1-Click Native Certificate Generator (Zero Python):
-* **Linux**: Run `./generate_certs.sh` (or `./generate_certs.sh 192.168.29.x`)
-* **Windows**: Double-click `generate_certs.bat`
-
-#### 📂 Generated Certificate Files (inside `certs/` & Desktop):
-1. **`LocalLAN_RootCA.pem` / `LocalLAN_RootCA.crt`**: Standard X.509 v3 public certificate with full `/24` LAN IP SANs & `CA:TRUE`.
-2. **`LocalLAN_RootCA.p12` / `LocalLAN_RootCA.pfx`**: Universal PKCS#12 bundle for Android/iOS with friendly name *"LocalLAN Root CA"* (Password: **`1234`**).
-3. **`LocalLAN_RootCA.key`**: 2048-bit server private key.
-4. *(Legacy aliases `cert.pem`, `key.pem`, `cert.crt`, `cert.p12` are automatically maintained for backwards compatibility).*
-
-#### 🛡️ 1-Click Generic CA Trust Installers (Linux & Windows):
-* **🐧 Linux (Debian, Ubuntu, Fedora, Arch, openSUSE, Alpine + Chrome/Firefox NSS)**:
-  ```bash
-  sudo bash install_ca_cert.sh
-  ```
-* **🪟 Windows**:
-  Double-click **`install_ca_cert.bat`** (auto-requests Administrator privileges and adds the certificate to Windows *Trusted Root Certification Authorities*).
-
-#### 🌐 Using for Local HTTPS Web Servers:
-Because the certificate is a full Root CA with broad IP SANs and `serverAuth` key usage, you can use it in **Nginx / Caddy / Node.js / Apache** to serve local HTTPS dashboards with a **🔒 Green padlock / zero warnings** on all trusted devices.
-
-> 💡 **Looking for a standalone, general-purpose local LAN SSL certificate generator?** Check out our dedicated standalone tool: **[LAN-TLS](https://github.com/sidhantjohnaind/lan-tls)**.
-
-#### 📱 How to Transfer & Install on Softphones:
-* **📱 1-Click Web Delivery Server**:
-  * Run `./send_to_phone.sh` (Linux) or `send_to_phone.bat` (Windows) and open the printed URL on your phone for 1-tap download and setup!
-* **Inside Linphone App (Easiest — 0 OS install needed)**:
-  1. Transfer `LocalLAN_RootCA.pem` (or `cert.pem`) to your phone.
-  2. In **Linphone** -> **Settings ⚙️** -> **Network** -> **Root CA Certificate** -> Select `LocalLAN_RootCA.pem`.
-  3. Set Transport to **TLS** (Port `5062`).
-* **Android System KeyStore ("VPN & App User Certificate")**:
-  1. Transfer `LocalLAN_RootCA.p12` to phone -> Tap file -> Password: **`1234`** -> Tap **OK**.
-* **🍏 iOS / iPhone**:
-  1. AirDrop/Download `LocalLAN_RootCA.pem` -> Settings -> **Profile Downloaded** -> Install.
-  2. Settings -> **General** -> **About** -> **Certificate Trust Settings** -> Enable **Full Trust** for `LocalLAN_RootCA`.
-
-#### 🔀 How to Switch from UDP Mode (Default) to TLS Mode:
-By default, `b2bua` operates in pure **UDP mode (Port 5061)** (`ENABLE_LOCAL_TLS=0`), requiring zero certificate setup. If you decide to enable TLS later:
-
-1. **Enable TLS in `.env`**:
-   * Change `ENABLE_LOCAL_TLS=0` to `ENABLE_LOCAL_TLS=1` in your `.env` file.
-   * **🐧 On Linux**:
-     ```bash
-     sed -i 's/^ENABLE_LOCAL_TLS=.*/ENABLE_LOCAL_TLS=1/' ~/sipserver/.env
-     sudo systemctl restart jiofiber-b2bua
-     ```
-   * **🪟 On Windows**:
-     * Open `.env` in Notepad and set `ENABLE_LOCAL_TLS=1`.
-     * **If Service Mode**: Open cmd as Administrator and run `net stop JioFiberB2BUA && net start JioFiberB2BUA` (or restart the service in `services.msc`).
-     * **If Console Mode**: Close `b2bua_msvc.exe` and re-run `run_windows.bat`.
-
-2. **Automatic Certificate Handling**:
-   * If you don't have certificates yet, **`b2bua` automatically detects missing certs and generates a brand new 10-year pair on startup** on the fly!
-   * Or manually generate them anytime:
-     * **Linux**: `./generate_certs.sh`
-     * **Windows**: Double-click `generate_certs.bat`
-
-3. **Configure Softphone for TLS (Port 5062)**:
-   * **Linphone (Mobile / Desktop)**: Set Server to `<your-pc-ip>:5062`, Transport to **TLS**, and select `LocalLAN_RootCA.pem` as the Root CA Certificate.
-   * **MicroSIP (Windows)**: In Settings ➔ Network ➔ Check **TLS**, set Server to `<your-pc-ip>:5062`, and select `LocalLAN_RootCA.pem` as the CA certificate.
-   * **Windows Trust (Optional)**: Double-click `install_ca_cert.bat` to trust the certificate system-wide for all Windows apps and browsers.
-
-#### 🔐 Security & Privacy (Per-Device Isolated Encryption):
-* **No Shared Session Keys**: Sharing the Root CA certificate only shares **identity/trust**. 
-* Every individual connection (e.g. Phone A vs Laptop B) negotiates a **unique, independent symmetric session key (`AES-256-GCM` via ECDHE)**.
-* **Perfect Forward Secrecy (PFS)**: One device cannot eavesdrop on another device's calls or data streams. Session keys exist only in volatile RAM for the duration of the connection.
 
 ---
 
@@ -224,23 +145,21 @@ If you multi-boot (**Windows 11 / Windows 10 / Ubuntu / Debian / Arch**) on the 
 
 | Setting | Value |
 |---|---|
-| SIP Server / Domain | `<your-pc-ip>:5061` (UDP) or `<your-pc-ip>:5062` (TLS) |
-| Transport | UDP (Default) or TLS |
+| SIP Server / Domain | `<your-pc-ip>:5061` |
+| Transport | **UDP** |
 | Username | any (e.g. `100` or `101`) |
 | Password | any (e.g. `1234`) |
 
-> **TLS / Linphone Note**: When using **TLS** transport on port `5062`, Linphone displays **Secured 🔒** once `cert.pem` is imported into Linphone or your phone's Trust Store.
->
-> **Tailscale users**: Use your Tailscale IP (e.g. `100.x.x.x:5061`) as the SIP server in your softphone. The B2BUA automatically detects and uses the correct Tailscale interface.
+> **Tailscale / VPN users**: Use your Tailscale / VPN IP (e.g. `100.x.x.x:5061`) as the SIP server in your softphone. The B2BUA automatically detects and routes across the correct VPN interface.
 
 ```
-Softphone (SIP/UDP or TCP)
-  ↕  UDP / TCP port 5061
-[B2BUA]  ←── .env credentials
-  ↕  TLS port 5068 (Carrier Encrypted)
+Softphone (Linphone / MicroSIP / GS Wave)
+  ↕  SIP UDP port 5061
+[B2BUA Proxy]  ←── .env credentials
+  ↕  TLS v1.2 port 5068 (Carrier Encrypted)
 Jio IMS / ONT (192.168.29.1)
   ↕
-PSTN / Phone Numbers
+PSTN / Mobile Networks
 ```
 
 The B2BUA acts as a full SIP proxy:
