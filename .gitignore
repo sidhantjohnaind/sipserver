@@ -31,8 +31,10 @@ __pycache__/
 *.pyo
 
 # Root-level build outputs (use bin/ for final releases)
+b2bua
 b2bua_msvc.exe
 b2bua_wsl
+b2bua-riscv64
 JioFiber_B2BUA_Setup.exe
 JioFiber_B2BUA_Setup_x64.exe
 JioFiber_B2BUA_Setup_x86.exe
