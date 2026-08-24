@@ -49,17 +49,14 @@ Compared to earlier Python/Asterisk/Docker implementations (such as `jiofiber-si
 
 ### 1. Download a pre-built binary / 1-Click Installer
 
-Go to [Releases](https://github.com/sidhantjohnaind/sipserver/releases/tag/v1.2.0) and download the 1-click installer or standalone binary for your target platform:
+Go to [Releases](https://github.com/sidhantjohnaind/sipserver/releases/tag/v1.3.0) and download the 1-click installer or standalone binary for your target platform:
 
 | Platform | Download Link | Package Name | Type / Notes |
 |---|---|---|---|
-| **Windows x64 64-bit (1-Click Installer)** | [🚀 **Download 64-bit Setup (`JioFiber_B2BUA_Setup_x64.exe`)**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.2.0/JioFiber_B2BUA_Setup_x64.exe) | `JioFiber_B2BUA_Setup_x64.exe` (2.3 MB) | ⚡ **1-Click 64-bit Windows Installer** (Auto-configures Firewall, Service & Shortcuts) |
-| **Windows x86 32-bit (1-Click Installer)** | [🚀 **Download 32-bit Setup (`JioFiber_B2BUA_Setup_x86.exe`)**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.2.0/JioFiber_B2BUA_Setup_x86.exe) | `JioFiber_B2BUA_Setup_x86.exe` (2.1 MB) | ⚡ **1-Click 32-bit Windows Installer** (Compatible with legacy 32-bit Windows systems) |
-| **Windows Portable** | [📥 Download `b2bua_msvc.exe`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.2.0/b2bua_msvc.exe) | `b2bua_msvc.exe` (6.2 MB) | ✅ Zero-dependency standalone binary (Dual SCM + Console) |
-| **Linux 1-Click Script (x86_64 / ARM64)** | [🐧 **Download `install_linux.sh`**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.2.0/install_linux.sh) | `install_linux.sh` (4.1 KB) | ⚡ **1-Click Linux Installer** (Auto-detects Arch, Firewall, Service) |
-| **Linux x86_64 (AppImage)** | [🐧 **Download `JioFiber_B2BUA-x86_64.AppImage`**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.2.0/JioFiber_B2BUA-x86_64.AppImage) | `JioFiber_B2BUA-x86_64.AppImage` (1.8 MB) | ⚡ **1-Click Portable Linux AppImage** |
-| **Linux x86_64 Standalone** | [📥 Download `b2bua-linux-amd64`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.2.0/b2bua-linux-amd64) | `b2bua-linux-amd64` (2.1 MB) | ✅ Pre-built Linux AMD64 binary with AMR-WB / AMR |
-| **Linux ARM64 Standalone** | [📥 Download `b2bua-linux-arm64`](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.2.0/b2bua-linux-arm64) | `b2bua-linux-arm64` (2.5 MB) | ✅ Pre-built for Raspberry Pi / ARM64 Routers / SBCs |
+| **Windows x64 (Native MSVC)** | [📥 **Download `b2bua_msvc.exe`**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.3.0/b2bua_msvc.exe) | `b2bua_msvc.exe` (1.7 MB) | ⚡ **Native MSVC Executable** (Dual Windows Service + Console Mode) |
+| **Linux x86_64 Standalone** | [🐧 **Download `b2bua-linux-amd64`**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.3.0/b2bua-linux-amd64) | `b2bua-linux-amd64` (2.2 MB) | ✅ Native Linux AMD64 binary with AMR-WB / AMR |
+| **Linux ARM64 Standalone** | [🐧 **Download `b2bua-linux-arm64`**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.3.0/b2bua-linux-arm64) | `b2bua-linux-arm64` (2.6 MB) | ✅ Pre-built for Raspberry Pi / ARM64 Routers / SBCs |
+| **Linux 1-Click Script** | [🐧 **Download `install_linux.sh`**](https://raw.githubusercontent.com/sidhantjohnaind/sipserver/master/install_linux.sh) | `install_linux.sh` (4.4 KB) | ⚡ **1-Click Linux Installer** (Auto-detects Arch, Firewall, Systemd) |
 
 > **Windows on ARM (Snapdragon X Elite / Surface Pro ARM / Windows 11 ARM64)**:
 > Windows 11 ARM64 includes Microsoft's **Prism x64 emulation engine** — the standard `b2bua_msvc.exe` (x64) runs on all Windows ARM devices with near-native speed and **zero configuration needed**. A native ARM64 build script ([`src/build_win_arm64.py`](src/build_win_arm64.py)) is also provided if you have the MSVC ARM64 cross-compile toolchain installed.
@@ -232,8 +229,32 @@ PSTN / Phone Numbers
 The B2BUA acts as a full SIP proxy:
 - Listens on UDP & TCP `5061` for local softphones (Linphone, Sipnetic, MicroSIP)
 - Registers upstream with Jio IMS over TLS `5068`
-- Bridges all call legs transparently with native **AMR-WB (16 kHz HD Voice)** and **G.711 PCMA/PCMU** audio
+- Bridges all call legs transparently with native **AMR-WB (16 kHz HD Voice)**, **AMR-NB (8 kHz)**, and **G.711 PCMA/PCMU** audio
 - Rewrites `Contact` and `SDP` headers per-call to match the correct network interface
+
+---
+
+### 🎙️ CRITICAL: Audio Quality & AMR Codec Configuration (Must Read)
+
+To achieve **crystal clear voice quality** and avoid robotic audio, muffled speech, or "transistor radio" distortion, configuring the audio codec in your softphone is **CRITICAL**:
+
+#### 💡 Why `AMR/8000` is Important:
+1. **Carrier Native Codec**: Jio IMS transmits voice calls across the cellular VoLTE network using **AMR-NB (8 kHz, 12.2 kbps)** or **AMR-WB (16 kHz HD Voice)**.
+2. **Eliminates Double Transcoding**: When your softphone is configured to use legacy `PCMA` (G.711 A-law) or `PCMU`, audio undergoes lossy multi-stage conversion (`PCMA -> PCM -> AMR`). This mismatch can introduce robotic timbre, low volume, or garbled transistor noise.
+3. **Pristine End-to-End Audio**: When your softphone sends **`AMR/8000`** (or uncompressed **`L16/8000`**), voice packets stream directly and cleanly with **zero transcoding loss**.
+
+#### 🪟 MicroSIP Audio Setup (Windows):
+In MicroSIP, click **Menu ➔ Settings (⚙️) ➔ Audio**:
+* **Audio Codecs**: Move **`AMR/8000/1`** (or `AMR-WB/16000/1`) to the **top** of the enabled codecs list (followed by `L16/8000/1`).
+* **VAD (Voice Activity Detection)**: **Enable (Checked)** — eliminates background microphone hiss when silent.
+* **Echo Cancellation (EC)**: 
+  * If using **Headphones / Headsets**: Keep EC disabled or mic volume moderate to prevent voice suppression.
+  * If using **Loudspeakers**: Keep EC enabled to prevent acoustic feedback.
+
+#### 📱 Linphone / Sipnetic / GS Wave Setup (Android / iOS):
+* In **Settings ⚙️ ➔ Audio ➔ Codecs**:
+  * Enable **`AMR-WB (16000 Hz)`** and **`AMR (8000 Hz)`**.
+  * Place them at the highest priority above PCMA/PCMU.
 
 ---
 
