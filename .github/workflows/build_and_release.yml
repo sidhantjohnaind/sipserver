@@ -1,4 +1,4 @@
-﻿name: Build & Release JioFiber B2BUA
+name: Build & Release JioFiber B2BUA
 
 on:
   push:
@@ -37,7 +37,11 @@ jobs:
       - name: Copy binary to bin
         run: |
           New-Item -ItemType Directory -Path "bin\windows-x64" -Force
-          Copy-Item "b2bua_msvc.exe" -Destination "bin\windows-x64\b2bua_msvc.exe" -Force
+          if (Test-Path "b2bua_msvc.exe") {
+            Copy-Item "b2bua_msvc.exe" -Destination "bin\windows-x64\b2bua_msvc.exe" -Force
+          } elseif (Test-Path "bin\windows-x64\b2bua_msvc.exe") {
+            Copy-Item "bin\windows-x64\b2bua_msvc.exe" -Destination "b2bua_msvc.exe" -Force
+          }
 
       - name: Compile 1-Click Inno Setup Installer
         run: |
