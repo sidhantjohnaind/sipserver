@@ -89,7 +89,7 @@ def compile_file(item):
     cmd = f'{compiler} -c -O2 {std_flag} {defs} {inc_cmd} "{src}" -o "{obj_path}"'
     res = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     if res.returncode != 0:
-        failed_files.append((src, res.stderr[:200]))
+        failed_files.append((src, res.stderr.strip()))
         return None
     return obj_path
 
@@ -100,7 +100,8 @@ with ThreadPoolExecutor(max_workers=8) as pool:
 if failed_files:
     print(f"\n{len(failed_files)} files failed to compile:")
     for f, err in failed_files:
-        print(f"  FAIL: {os.path.basename(f)}: {err.strip().replace(chr(10), ' ')}")
+        print(f"  FAIL: {os.path.basename(f)}:\n{err}\n")
+    sys.exit(1)
 
 valid_objs = [os.path.normpath(o) for o in results if o and os.path.exists(o)]
 print(f"Successfully compiled {len(valid_objs)} / {len(c_files)} RISC-V 64 object files.")
@@ -111,16 +112,22 @@ out_exe = os.path.join(output_dir, 'b2bua')
 
 print("\nLinking native Linux RISC-V 64 executable b2bua...")
 objs_str = " ".join([f'"{o}"' for o in valid_objs])
-link_cmd = f'riscv64-linux-gnu-g++ {objs_str} -o "{out_exe}" -L/usr/riscv64-linux-gnu/lib -L/usr/lib/riscv64-linux-gnu -L/tmp/riscv64_sysroot/usr/lib/riscv64-linux-gnu -lssl -lcrypto -lpthread -lm -ldl'
+
+lib_search = [
+    '/tmp/riscv64_sysroot/usr/lib/riscv64-linux-gnu',
+    '/tmp/riscv64_sysroot/usr/lib',
+    '/tmp/riscv64_sysroot/lib/riscv64-linux-gnu',
+    '/tmp/riscv64_sysroot/lib',
+    '/usr/lib/riscv64-linux-gnu',
+    '/usr/riscv64-linux-gnu/lib'
+]
+lib_flags = " ".join([f"-L{p}" for p in lib_search if os.path.exists(p)])
+link_cmd = f'riscv64-linux-gnu-g++ {objs_str} -o "{out_exe}" {lib_flags} -lssl -lcrypto -lpthread -lm -ldl'
 
 res = subprocess.run(link_cmd, shell=True, capture_output=True, text=True)
 if res.returncode != 0:
-    # Try fallback without -lssl / -lcrypto if static or stubbed
-    fallback_cmd = f'riscv64-linux-gnu-g++ {objs_str} -o "{out_exe}" -lpthread -lm'
-    res = subprocess.run(fallback_cmd, shell=True, capture_output=True, text=True)
-    if res.returncode != 0:
-        print(f"[!] Linking failed:\n{res.stderr}")
-        sys.exit(1)
+    print(f"[!] Linking failed:\n{res.stderr}")
+    sys.exit(1)
 
 size = os.path.getsize(out_exe)
 print(f"\n=== SUCCESS! ===")
