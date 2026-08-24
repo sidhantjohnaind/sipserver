@@ -53,7 +53,8 @@ Go to [Releases](https://github.com/sidhantjohnaind/sipserver/releases/tag/v1.3.
 
 | Platform | Download Link | Package Name | Type / Notes |
 |---|---|---|---|
-| **Windows x64 (Native MSVC)** | [📥 **Download `b2bua_msvc.exe`**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.3.0/b2bua_msvc.exe) | `b2bua_msvc.exe` (1.7 MB) | ⚡ **Native MSVC Executable** (Dual Windows Service + Console Mode) |
+| **Windows x64 (1-Click Installer)** | [🚀 **Download 64-bit Setup (`JioFiber_B2BUA_Setup_x64.exe`)**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.3.0/JioFiber_B2BUA_Setup_x64.exe) | `JioFiber_B2BUA_Setup_x64.exe` (2.7 MB) | ⚡ **1-Click Windows GUI Installer** (Auto-configures Firewall, Service & Shortcuts) |
+| **Windows x64 (Standalone MSVC)** | [📥 **Download `b2bua_msvc.exe`**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.3.0/b2bua_msvc.exe) | `b2bua_msvc.exe` (1.7 MB) | ⚡ **Native MSVC Executable** (Dual Windows Service + Console Mode) |
 | **Linux x86_64 Standalone** | [🐧 **Download `b2bua-linux-amd64`**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.3.0/b2bua-linux-amd64) | `b2bua-linux-amd64` (2.2 MB) | ✅ Native Linux AMD64 binary with AMR-WB / AMR |
 | **Linux ARM64 Standalone** | [🐧 **Download `b2bua-linux-arm64`**](https://github.com/sidhantjohnaind/sipserver/releases/download/v1.3.0/b2bua-linux-arm64) | `b2bua-linux-arm64` (2.6 MB) | ✅ Pre-built for Raspberry Pi / ARM64 Routers / SBCs |
 | **Linux 1-Click Script** | [🐧 **Download `install_linux.sh`**](https://raw.githubusercontent.com/sidhantjohnaind/sipserver/master/install_linux.sh) | `install_linux.sh` (4.4 KB) | ⚡ **1-Click Linux Installer** (Auto-detects Arch, Firewall, Systemd) |

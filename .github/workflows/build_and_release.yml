@@ -1,0 +1,96 @@
+﻿name: Build & Release JioFiber B2BUA
+
+on:
+  push:
+    branches: [ master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup MSVC developer command prompt
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build OpenCORE AMR Libraries
+        run: |
+          python src/build_opencore_amr.py
+
+      - name: Build Native MSVC B2BUA Executable
+        run: |
+          python src/build_msvc_pjsip.py
+
+      - name: Copy binary to bin
+        run: |
+          New-Item -ItemType Directory -Path "bin\windows-x64" -Force
+          Copy-Item "b2bua_msvc.exe" -Destination "bin\windows-x64\b2bua_msvc.exe" -Force
+
+      - name: Compile 1-Click Inno Setup Installer
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
+          Copy-Item "JioFiber_B2BUA_Setup_x64.exe" -Destination "JioFiber_B2BUA_Setup.exe" -Force
+
+      - name: Upload Windows Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-binaries
+          path: |
+            bin/windows-x64/b2bua_msvc.exe
+            JioFiber_B2BUA_Setup_x64.exe
+            JioFiber_B2BUA_Setup.exe
+
+  build-linux-amd64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libssl-dev libopencore-amrnb-dev libopencore-amrwb-dev libvo-amrwbenc-dev
+
+      - name: Build Linux amd64 Binary
+        run: |
+          python3 src/build_wsl.py || true
+          if [ ! -f bin/linux-amd64/b2bua ]; then
+            mkdir -p bin/linux-amd64
+            g++ -O2 -std=c++17 src/b2bua.cpp -o bin/linux-amd64/b2bua -Ithird_party/pjproject-2.15.1 -Ithird_party/opencore-amr/include -lssl -lcrypto -lpthread -lopencore-amrnb || true
+          fi
+
+      - name: Upload Linux amd64 Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-amd64-binary
+          path: bin/linux-amd64/b2bua
+
+  publish-release:
+    needs: [build-windows, build-linux-amd64]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Publish Release Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            windows-binaries/b2bua_msvc.exe
+            windows-binaries/JioFiber_B2BUA_Setup_x64.exe
+            windows-binaries/JioFiber_B2BUA_Setup.exe
+            linux-amd64-binary/b2bua
