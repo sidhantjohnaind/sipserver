@@ -774,7 +774,7 @@ static void win32_pipe_server_thread() {
             "\\\\.\\pipe\\jio_b2bua_logs",
             PIPE_ACCESS_OUTBOUND,
             PIPE_TYPE_BYTE | PIPE_WAIT,
-            1, 512 * 1024, 512 * 1024, 0, &sa
+            PIPE_UNLIMITED_INSTANCES, 512 * 1024, 512 * 1024, 0, &sa
         );
         if (hPipe != INVALID_HANDLE_VALUE) {
             if (ConnectNamedPipe(hPipe, NULL) || GetLastError() == ERROR_PIPE_CONNECTED) {
@@ -782,17 +782,24 @@ static void win32_pipe_server_thread() {
                 /* Pipe active - send buffer snapshot */
                 {
                     std::lock_guard<std::mutex> lock(g_ram_log_mutex);
-                    DWORD written = 0;
-                    WriteFile(hPipe, g_ram_log_buffer.data(), (DWORD)g_ram_log_buffer.size(), &written, NULL);
+                    if (!g_ram_log_buffer.empty()) {
+                        DWORD written = 0;
+                        WriteFile(hPipe, g_ram_log_buffer.data(), (DWORD)g_ram_log_buffer.size(), &written, NULL);
+                    }
                 }
                 while (g_running && g_hLogPipe == hPipe) {
-                    Sleep(100);
+                    DWORD bytesAvail = 0;
+                    if (!PeekNamedPipe(hPipe, NULL, 0, NULL, &bytesAvail, NULL)) {
+                        break; /* Client closed connection */
+                    }
+                    Sleep(50);
                 }
+                DisconnectNamedPipe(hPipe);
             }
             CloseHandle(hPipe);
             if (g_hLogPipe == hPipe) g_hLogPipe = INVALID_HANDLE_VALUE;
         }
-        Sleep(500);
+        Sleep(100);
     }
     if (sa.lpSecurityDescriptor) {
         LocalFree(sa.lpSecurityDescriptor);
