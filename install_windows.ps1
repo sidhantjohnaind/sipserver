@@ -49,6 +49,33 @@ if (-not (Test-Path $exePath)) {
 }
 Write-Host "[x] Native binary ready at: $exePath" -ForegroundColor Green
 
+# Download view_logs.bat helper
+$viewLogsUrl = "https://raw.githubusercontent.com/sidhantjohnaind/sipserver/master/view_logs.bat"
+Invoke-WebRequest -Uri $viewLogsUrl -OutFile (Join-Path $installDir "view_logs.bat") -UseBasicParsing -ErrorAction SilentlyContinue
+
+# Step 4.5: Check for .env or run one-time OTP Provisioner
+$envPath = Join-Path $installDir ".env"
+if (-not (Test-Path $envPath)) {
+    if (Test-Path ".\.env") {
+        Copy-Item ".\.env" $envPath -Force
+        Write-Host "[x] Copied existing .env configuration to $envPath" -ForegroundColor Green
+    } elseif (Test-Path "$HOME\.jio_b2bua.env") {
+        Copy-Item "$HOME\.jio_b2bua.env" $envPath -Force
+        Write-Host "[x] Copied existing .env from user profile to $envPath" -ForegroundColor Green
+    } else {
+        Write-Host ""
+        Write-Host "---------------------------------------------------------------------" -ForegroundColor Yellow
+        Write-Host "   [!] ONE-TIME SETUP: Jio Router OTP Provisioning Required" -ForegroundColor Yellow
+        Write-Host "---------------------------------------------------------------------" -ForegroundColor Yellow
+        Write-Host "   A console window will now open to request OTP from your Jio Router." -ForegroundColor White
+        Write-Host "   1. Enter your Jio Router IP (press Enter for default 192.168.29.1)." -ForegroundColor White
+        Write-Host "   2. Enter the OTP sent to your registered mobile number." -ForegroundColor White
+        Write-Host "---------------------------------------------------------------------" -ForegroundColor Yellow
+        Write-Host ""
+        Start-Process -FilePath "$exePath" -ArgumentList "--console" -Wait -WorkingDirectory "$installDir"
+    }
+}
+
 # Step 5: Configure Windows Firewall Rules
 Write-Host "[*] Configuring Windows Firewall rules..." -ForegroundColor Cyan
 cmd.exe /c "netsh advfirewall firewall delete rule name=\"JioFiber B2BUA SIP UDP\" >nul 2>&1"
@@ -79,6 +106,8 @@ Write-Host "====================================================================
 Write-Host "   [SUCCESS] JioFiber B2BUA Windows Service Installed & Running!" -ForegroundColor Green
 Write-Host "=====================================================================" -ForegroundColor Green
 Write-Host "   Service Name:   JioFiberB2BUA (Automatic Startup)" -ForegroundColor White
+Write-Host "   Install Dir:    $installDir" -ForegroundColor White
+Write-Host "   View Logs:      & '$installDir\view_logs.bat'" -ForegroundColor Yellow
 Write-Host "   Check Status:   Get-Service JioFiberB2BUA (or services.msc)" -ForegroundColor White
 Write-Host "   Stop Service:   Stop-Service JioFiberB2BUA" -ForegroundColor White
 Write-Host "=====================================================================" -ForegroundColor Green

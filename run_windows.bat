@@ -29,14 +29,13 @@ if not exist "%EXE_PATH%" (
 :: Step 4: Run native Windows B2BUA executable
 echo [*] Starting JioFiber B2BUA Proxy...
 echo [*] Local Softphone UDP Listener: 192.168.29.195:5061
-echo [*] Local Softphone TLS Listener: 192.168.29.195:5062
 echo [*] Upstream Jio IMS TLS Target:  192.168.29.1:5068
 echo.
 echo Press Ctrl+C to stop the proxy.
 echo =====================================================================
 echo.
 
-bin\windows-x64\b2bua_msvc.exe
+"%EXE_PATH%" --console
 
 echo.
 echo [*] B2BUA proxy stopped.

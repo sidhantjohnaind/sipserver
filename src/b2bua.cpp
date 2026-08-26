@@ -758,15 +758,23 @@ static std::mutex g_ram_log_mutex;
 
 #ifdef _WIN32
 #include <windows.h>
+#include <sddl.h>
 static HANDLE g_hLogPipe = INVALID_HANDLE_VALUE;
 
 static void win32_pipe_server_thread() {
+    SECURITY_ATTRIBUTES sa;
+    ZeroMemory(&sa, sizeof(sa));
+    sa.nLength = sizeof(sa);
+    sa.bInheritHandle = FALSE;
+    ConvertStringSecurityDescriptorToSecurityDescriptorA(
+        "D:(A;;GRGW;;;WD)", SDDL_REVISION_1, &(sa.lpSecurityDescriptor), NULL);
+
     while (g_running) {
         HANDLE hPipe = CreateNamedPipeA(
             "\\\\.\\pipe\\jio_b2bua_logs",
             PIPE_ACCESS_OUTBOUND,
             PIPE_TYPE_BYTE | PIPE_WAIT,
-            1, 512 * 1024, 512 * 1024, 0, NULL
+            1, 512 * 1024, 512 * 1024, 0, &sa
         );
         if (hPipe != INVALID_HANDLE_VALUE) {
             if (ConnectNamedPipe(hPipe, NULL) || GetLastError() == ERROR_PIPE_CONNECTED) {
@@ -785,6 +793,9 @@ static void win32_pipe_server_thread() {
             if (g_hLogPipe == hPipe) g_hLogPipe = INVALID_HANDLE_VALUE;
         }
         Sleep(500);
+    }
+    if (sa.lpSecurityDescriptor) {
+        LocalFree(sa.lpSecurityDescriptor);
     }
 }
 #endif
