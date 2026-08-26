@@ -5,6 +5,9 @@
 #   irm https://raw.githubusercontent.com/sidhantjohnaind/sipserver/master/uninstall_windows.ps1 | iex
 # =====================================================================
 
+$ErrorActionPreference = "SilentlyContinue"
+$ProgressPreference = "SilentlyContinue"
+
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
     Write-Host "[*] Requesting Administrator privileges..." -ForegroundColor Yellow
@@ -17,11 +20,12 @@ Write-Host "   Uninstalling JioFiber B2BUA Windows Service" -ForegroundColor Yel
 Write-Host "=====================================================================" -ForegroundColor Cyan
 
 Stop-Service -Name "JioFiberB2BUA" -Force -ErrorAction SilentlyContinue
-taskkill /F /IM b2bua_msvc.exe 2>$null | Out-Null
-sc.exe delete JioFiberB2BUA 2>$null | Out-Null
+Get-Process -Name "b2bua_msvc", "b2bua" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+cmd.exe /c "taskkill /F /IM b2bua_msvc.exe >nul 2>&1"
+cmd.exe /c "sc delete JioFiberB2BUA >nul 2>&1"
 
-netsh advfirewall firewall delete rule name="JioFiber B2BUA SIP UDP" 2>$null | Out-Null
-netsh advfirewall firewall delete rule name="JioFiber B2BUA RTP Media UDP" 2>$null | Out-Null
-netsh advfirewall firewall delete rule name="JioFiber B2BUA App" 2>$null | Out-Null
+cmd.exe /c "netsh advfirewall firewall delete rule name=\"JioFiber B2BUA SIP UDP\" >nul 2>&1"
+cmd.exe /c "netsh advfirewall firewall delete rule name=\"JioFiber B2BUA RTP Media UDP\" >nul 2>&1"
+cmd.exe /c "netsh advfirewall firewall delete rule name=\"JioFiber B2BUA App\" >nul 2>&1"
 
 Write-Host "[x] Service and Firewall rules removed successfully." -ForegroundColor Green

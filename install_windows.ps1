@@ -5,7 +5,8 @@
 #   irm https://raw.githubusercontent.com/sidhantjohnaind/sipserver/master/install_windows.ps1 | iex
 # =====================================================================
 
-$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = "SilentlyContinue"
+$ProgressPreference = "SilentlyContinue"
 
 # Step 1: Self-elevate to Administrator if required
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -33,7 +34,8 @@ if (-not (Test-Path $installDir)) {
 # Step 3: Stop existing service and processes before replacing binary
 Write-Host "[*] Stopping existing processes & service..." -ForegroundColor Yellow
 Stop-Service -Name "JioFiberB2BUA" -Force -ErrorAction SilentlyContinue
-taskkill /F /IM b2bua_msvc.exe 2>$null | Out-Null
+Get-Process -Name "b2bua_msvc", "b2bua" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+cmd.exe /c "taskkill /F /IM b2bua_msvc.exe >nul 2>&1"
 Start-Sleep -Seconds 1
 
 # Step 4: Download or copy latest binary
@@ -49,24 +51,24 @@ Write-Host "[x] Native binary ready at: $exePath" -ForegroundColor Green
 
 # Step 5: Configure Windows Firewall Rules
 Write-Host "[*] Configuring Windows Firewall rules..." -ForegroundColor Cyan
-netsh advfirewall firewall delete rule name="JioFiber B2BUA SIP UDP" 2>$null | Out-Null
-netsh advfirewall firewall add rule name="JioFiber B2BUA SIP UDP" dir=in action=allow protocol=UDP localport=5061 | Out-Null
+cmd.exe /c "netsh advfirewall firewall delete rule name=\"JioFiber B2BUA SIP UDP\" >nul 2>&1"
+cmd.exe /c "netsh advfirewall firewall add rule name=\"JioFiber B2BUA SIP UDP\" dir=in action=allow protocol=UDP localport=5061 >nul 2>&1"
 
-netsh advfirewall firewall delete rule name="JioFiber B2BUA RTP Media UDP" 2>$null | Out-Null
-netsh advfirewall firewall add rule name="JioFiber B2BUA RTP Media UDP" dir=in action=allow protocol=UDP localport=4000-4050,52000-52200 | Out-Null
+cmd.exe /c "netsh advfirewall firewall delete rule name=\"JioFiber B2BUA RTP Media UDP\" >nul 2>&1"
+cmd.exe /c "netsh advfirewall firewall add rule name=\"JioFiber B2BUA RTP Media UDP\" dir=in action=allow protocol=UDP localport=4000-4050,52000-52200 >nul 2>&1"
 
-netsh advfirewall firewall delete rule name="JioFiber B2BUA App" 2>$null | Out-Null
-netsh advfirewall firewall add rule name="JioFiber B2BUA App" dir=in action=allow program="$exePath" enable=yes | Out-Null
+cmd.exe /c "netsh advfirewall firewall delete rule name=\"JioFiber B2BUA App\" >nul 2>&1"
+cmd.exe /c "netsh advfirewall firewall add rule name=\"JioFiber B2BUA App\" dir=in action=allow program=\"$exePath\" enable=yes >nul 2>&1"
 Write-Host "[x] Firewall rules configured (UDP 5061, UDP 4000-4050, 52000-52200)!" -ForegroundColor Green
 
 # Step 6: Create and configure Windows Service
 Write-Host "[*] Registering JioFiberB2BUA Windows Service..." -ForegroundColor Cyan
-sc.exe stop JioFiberB2BUA 2>$null | Out-Null
-sc.exe delete JioFiberB2BUA 2>$null | Out-Null
+cmd.exe /c "sc stop JioFiberB2BUA >nul 2>&1"
+cmd.exe /c "sc delete JioFiberB2BUA >nul 2>&1"
 
-sc.exe create JioFiberB2BUA binPath= "`"$exePath`"" start= auto DisplayName= "JioFiber SIP B2BUA Service" | Out-Null
-sc.exe description JioFiberB2BUA "Lightweight native SIP B2BUA proxy for JioFiber VoIP" | Out-Null
-sc.exe failure JioFiberB2BUA reset= 86400 actions= restart/5000/restart/5000/restart/5000 | Out-Null
+cmd.exe /c "sc create JioFiberB2BUA binPath= \"\"\"$exePath\"\"\" start= auto DisplayName= \"JioFiber SIP B2BUA Service\" >nul 2>&1"
+cmd.exe /c "sc description JioFiberB2BUA \"Lightweight native SIP B2BUA proxy for JioFiber VoIP\" >nul 2>&1"
+cmd.exe /c "sc failure JioFiberB2BUA reset= 86400 actions= restart/5000/restart/5000/restart/5000 >nul 2>&1"
 
 # Step 7: Start service
 Write-Host "[*] Starting JioFiberB2BUA Service..." -ForegroundColor Cyan
