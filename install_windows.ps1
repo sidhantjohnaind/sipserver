@@ -90,16 +90,23 @@ Write-Host "[x] Firewall rules configured (UDP 5061, UDP 4000-4050, 52000-52200)
 
 # Step 6: Create and configure Windows Service
 Write-Host "[*] Registering JioFiberB2BUA Windows Service..." -ForegroundColor Cyan
-cmd.exe /c "sc stop JioFiberB2BUA >nul 2>&1"
-cmd.exe /c "sc delete JioFiberB2BUA >nul 2>&1"
+Stop-Service -Name "JioFiberB2BUA" -Force -ErrorAction SilentlyContinue
+& sc.exe delete JioFiberB2BUA 2>$null | Out-Null
+Start-Sleep -Seconds 1
 
-cmd.exe /c "sc create JioFiberB2BUA binPath= \"\"\"$exePath\"\"\" start= auto DisplayName= \"JioFiber SIP B2BUA Service\" >nul 2>&1"
-cmd.exe /c "sc description JioFiberB2BUA \"Lightweight native SIP B2BUA proxy for JioFiber VoIP\" >nul 2>&1"
-cmd.exe /c "sc failure JioFiberB2BUA reset= 86400 actions= restart/5000/restart/5000/restart/5000 >nul 2>&1"
+try {
+    New-Service -Name "JioFiberB2BUA" -BinaryPathName "`"$exePath`"" -DisplayName "JioFiber SIP B2BUA Service" -StartupType Automatic -Description "Lightweight native SIP B2BUA proxy for JioFiber VoIP" -ErrorAction Stop | Out-Null
+    Write-Host "[x] Windows Service registered via New-Service!" -ForegroundColor Green
+} catch {
+    & sc.exe create JioFiberB2BUA binPath= "`"$exePath`"" start= auto DisplayName= "JioFiber SIP B2BUA Service" | Out-Null
+    & sc.exe description JioFiberB2BUA "Lightweight native SIP B2BUA proxy for JioFiber VoIP" | Out-Null
+}
+& sc.exe failure JioFiberB2BUA reset= 86400 actions= restart/5000/restart/5000/restart/5000 2>$null | Out-Null
 
 # Step 7: Start service
 Write-Host "[*] Starting JioFiberB2BUA Service..." -ForegroundColor Cyan
 Start-Service -Name "JioFiberB2BUA" -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 2
 
 Write-Host ""
 Write-Host "=====================================================================" -ForegroundColor Green
