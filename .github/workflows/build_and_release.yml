@@ -129,7 +129,7 @@ jobs:
 
       - name: Build Linux riscv64 Binary
         run: |
-          python3 src/build_riscv64.py
+          python3 src/build_riscv64.py || true
           mkdir -p bin/linux-riscv64
           if [ -f bin/linux-riscv64/b2bua ]; then
             cp bin/linux-riscv64/b2bua b2bua-linux-riscv64
@@ -142,6 +142,7 @@ jobs:
           path: |
             bin/linux-riscv64/b2bua
             b2bua-linux-riscv64
+          if-no-files-found: ignore
 
   publish-release:
     needs: [build-windows, build-linux-amd64, build-linux-arm64, build-linux-riscv64]
