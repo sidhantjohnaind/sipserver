@@ -43,6 +43,8 @@ typedef int SOCKET;
 #include <csignal>
 #include <cstdlib>
 #include <cstring>
+#include <thread>
+#include <chrono>
 
 extern "C" {
 #include <pjsua-lib/pjsua.h>
@@ -724,7 +726,11 @@ static void audio_meter_thread() {
         pj_thread_register("audio_meter", desc, &thread);
     }
     while (g_running) {
+#ifdef _WIN32
         Sleep(1000);
+#else
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+#endif
         for (int i = 0; i < MAX_CALLS; ++i) {
             pjsua_call_id peer = g_peer_map[i];
             if (peer != PJSUA_INVALID_ID && i < peer) {
