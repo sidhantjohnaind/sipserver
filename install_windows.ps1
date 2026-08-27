@@ -88,25 +88,53 @@ cmd.exe /c "netsh advfirewall firewall delete rule name=\"JioFiber B2BUA App\" >
 cmd.exe /c "netsh advfirewall firewall add rule name=\"JioFiber B2BUA App\" dir=in action=allow program=\"$exePath\" enable=yes >nul 2>&1"
 Write-Host "[x] Firewall rules configured (UDP 5061, UDP 4000-4050, 52000-52200)!" -ForegroundColor Green
 
-# Step 6: Create and configure Windows Service
+# Step 6: Create or update Windows Service
 Write-Host "[*] Registering JioFiberB2BUA Windows Service..." -ForegroundColor Cyan
 Stop-Service -Name "JioFiberB2BUA" -Force -ErrorAction SilentlyContinue
-& sc.exe delete JioFiberB2BUA 2>$null | Out-Null
-Start-Sleep -Seconds 1
 
+$svcExists = $false
 try {
-    New-Service -Name "JioFiberB2BUA" -BinaryPathName "`"$exePath`"" -DisplayName "JioFiber SIP B2BUA Service" -StartupType Automatic -Description "Lightweight native SIP B2BUA proxy for JioFiber VoIP" -ErrorAction Stop | Out-Null
-    Write-Host "[x] Windows Service registered via New-Service!" -ForegroundColor Green
-} catch {
-    & sc.exe create JioFiberB2BUA binPath= "`"$exePath`"" start= auto DisplayName= "JioFiber SIP B2BUA Service" | Out-Null
-    & sc.exe description JioFiberB2BUA "Lightweight native SIP B2BUA proxy for JioFiber VoIP" | Out-Null
+    $s = Get-Service -Name "JioFiberB2BUA" -ErrorAction SilentlyContinue
+    if ($s) { $svcExists = $true }
+} catch {}
+
+if (-not $svcExists) {
+    $created = $false
+    try {
+        New-Service -Name "JioFiberB2BUA" -BinaryPathName $exePath -DisplayName "JioFiber SIP B2BUA Service" -StartupType Automatic -Description "Lightweight native SIP B2BUA proxy for JioFiber VoIP" -ErrorAction Stop | Out-Null
+        $created = $true
+        Write-Host "[x] Windows Service registered via New-Service!" -ForegroundColor Green
+    } catch {
+        Write-Host "[*] Trying registration with sc.exe..." -ForegroundColor Yellow
+    }
+
+    if (-not $created) {
+        $binArg = "binPath= \`"$exePath\`""
+        $dispArg = "DisplayName= JioFiber SIP B2BUA Service"
+        & sc.exe create JioFiberB2BUA $binArg start= auto $dispArg | Out-Null
+        & sc.exe description JioFiberB2BUA "Lightweight native SIP B2BUA proxy for JioFiber VoIP" | Out-Null
+    }
+} else {
+    Write-Host "[x] Service already registered, updating configuration..." -ForegroundColor Green
+    Set-Service -Name "JioFiberB2BUA" -StartupType Automatic -ErrorAction SilentlyContinue
 }
+
 & sc.exe failure JioFiberB2BUA reset= 86400 actions= restart/5000/restart/5000/restart/5000 2>$null | Out-Null
 
 # Step 7: Start service
 Write-Host "[*] Starting JioFiberB2BUA Service..." -ForegroundColor Cyan
 Start-Service -Name "JioFiberB2BUA" -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 2
+
+# Verify service state
+$svc = Get-Service -Name "JioFiberB2BUA" -ErrorAction SilentlyContinue
+if ($svc -and $svc.Status -eq 'Running') {
+    Write-Host "[x] Verified: JioFiberB2BUA is RUNNING!" -ForegroundColor Green
+} elseif ($svc) {
+    Write-Host "[!] Service installed. Current state: $($svc.Status)" -ForegroundColor Yellow
+} else {
+    Write-Host "[!] ERROR: Failed to register JioFiberB2BUA service." -ForegroundColor Red
+}
 
 Write-Host ""
 Write-Host "=====================================================================" -ForegroundColor Green
