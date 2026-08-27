@@ -772,7 +772,7 @@ static void win32_pipe_server_thread() {
     while (g_running) {
         HANDLE hPipe = CreateNamedPipeA(
             "\\\\.\\pipe\\jio_b2bua_logs",
-            PIPE_ACCESS_OUTBOUND,
+            PIPE_ACCESS_DUPLEX,
             PIPE_TYPE_BYTE | PIPE_WAIT,
             PIPE_UNLIMITED_INSTANCES, 512 * 1024, 512 * 1024, 0, &sa
         );
@@ -785,14 +785,17 @@ static void win32_pipe_server_thread() {
                     if (!g_ram_log_buffer.empty()) {
                         DWORD written = 0;
                         WriteFile(hPipe, g_ram_log_buffer.data(), (DWORD)g_ram_log_buffer.size(), &written, NULL);
+                        FlushFileBuffers(hPipe);
                     }
                 }
                 while (g_running && g_hLogPipe == hPipe) {
                     DWORD bytesAvail = 0;
-                    if (!PeekNamedPipe(hPipe, NULL, 0, NULL, &bytesAvail, NULL)) {
+                    DWORD bytesRead = 0;
+                    DWORD bytesLeft = 0;
+                    if (!PeekNamedPipe(hPipe, NULL, 0, &bytesRead, &bytesAvail, &bytesLeft)) {
                         break; /* Client closed connection */
                     }
-                    Sleep(50);
+                    Sleep(100);
                 }
                 DisconnectNamedPipe(hPipe);
             }
@@ -820,6 +823,8 @@ static void custom_ram_log_writer(int level, const char *data, int len) {
         DWORD written = 0;
         if (!WriteFile(g_hLogPipe, data, (DWORD)len, &written, NULL)) {
             g_hLogPipe = INVALID_HANDLE_VALUE;
+        } else {
+            FlushFileBuffers(g_hLogPipe);
         }
     }
 #endif
