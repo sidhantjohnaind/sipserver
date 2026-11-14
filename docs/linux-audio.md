@@ -75,6 +75,8 @@ Linphone → Jio call confirmed that outgoing static was gone. Additional revers
 AMR → PCMA tests showed no recurring silent blocks, although jitter-buffer
 delay changes made whole-signal correlation vary between runs.
 
+![Reference, old control with silence blocks, and fixed continuous control](linux-audio-waveform.png)
+
 These measurements validate the combined source-build replacement. The release
 executable differs from published source, so they do not establish that changing
 `frm_per_pkt` alone repairs that executable or identify its exact faulty
