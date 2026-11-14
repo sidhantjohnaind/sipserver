@@ -1166,7 +1166,20 @@ static void set_codecs() {
 
         pjmedia_codec_param param;
         if (pjsua_codec_get_param(&c[i].codec_id, &param) == PJ_SUCCESS) {
-            param.setting.frm_per_pkt = 1; /* Strict 20ms single frame per packet - eliminates 40ms buffering robotic noise */
+            /* G.711 uses 10 ms codec frames; AMR uses 20 ms frames. */
+            if (param.info.frm_ptime != 0 && 20 % param.info.frm_ptime == 0)
+                param.setting.frm_per_pkt = 20 / param.info.frm_ptime;
+            if (pj_strstr(&c[i].codec_id, &keep_amr)) {
+                /* Preserve Jio-compatible octet-aligned mode negotiation. */
+                param.setting.dec_fmtp.cnt = 2;
+                param.setting.dec_fmtp.param[0].name = pj_str((char*)"octet-align");
+                param.setting.dec_fmtp.param[0].val = pj_str((char*)"1");
+                param.setting.dec_fmtp.param[1].name = pj_str((char*)"mode-set");
+                param.setting.dec_fmtp.param[1].val =
+                    pj_strstr(&c[i].codec_id, &keep_amrwb)
+                    ? pj_str((char*)"0,1,2,3,4,5,6,7,8")
+                    : pj_str((char*)"0,1,2,3,4,5,6,7");
+            }
             param.setting.vad = 0;
             param.setting.cng = 0;
             param.setting.plc = 1;
