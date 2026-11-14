@@ -20,6 +20,7 @@ for m in metrics:
     ratio = float(rms.min()/rms.max())
     assert ratio > .5, f"{m['case']}: periodic audio dropout, RMS ratio={ratio:.4f}"
     assert m['sequence_gaps'] == 0, f"{m['case']}: RTP sequence gaps"
+    assert m['rtp_timestamp_steps'] == [160], f"{m['case']}: RTP timing is not 20 ms"
     assert m['clipped_samples'] == 0, f"{m['case']}: clipped output"
     assert not m['ffmpeg_decoder_errors'], f"{m['case']}: decoder errors"
     if m['carrier_codec'] == 'PCMA':
