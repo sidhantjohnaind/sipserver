@@ -1,0 +1,11 @@
+.git
+.env*
+*.pem
+*.key
+*.p12
+*.pfx
+**/__pycache__
+test-results
+third_party
+bin
+lib

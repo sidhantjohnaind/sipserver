@@ -1138,8 +1138,15 @@ static void on_reg_state(pjsua_acc_id acc_id) {
     }
 }
 
+static bool wideband_enabled() {
+    const std::string value = get_env_def("ENABLE_WIDEBAND", "0");
+    return value == "1" || value == "true" || value == "on";
+}
+
 static void set_codecs() {
+    const bool wideband = wideband_enabled();
     pj_str_t keep_amrwb = pj_str((char*)"AMR-WB");
+    pj_str_t keep_g722  = pj_str((char*)"G722/");
     pj_str_t keep_amr   = pj_str((char*)"AMR");
     pj_str_t keep_l16   = pj_str((char*)"L16/8000");
     pj_str_t keep_pcmu  = pj_str((char*)"PCMU");
@@ -1153,8 +1160,10 @@ static void set_codecs() {
     for (unsigned i = 0; i < n; i++) {
         if (pj_strstr(&c[i].codec_id, &keep_amrwb))
             pjsua_codec_set_priority(&c[i].codec_id, 255);
+        else if (pj_strstr(&c[i].codec_id, &keep_g722))
+            pjsua_codec_set_priority(&c[i].codec_id, wideband ? 254 : 0);
         else if (pj_strstr(&c[i].codec_id, &keep_amr))
-            pjsua_codec_set_priority(&c[i].codec_id, 254);
+            pjsua_codec_set_priority(&c[i].codec_id, wideband ? 253 : 254);
         else if (pj_strstr(&c[i].codec_id, &keep_l16))
             pjsua_codec_set_priority(&c[i].codec_id, 252);
         else if (pj_strstr(&c[i].codec_id, &keep_pcmu))
@@ -1166,7 +1175,20 @@ static void set_codecs() {
 
         pjmedia_codec_param param;
         if (pjsua_codec_get_param(&c[i].codec_id, &param) == PJ_SUCCESS) {
-            param.setting.frm_per_pkt = 1; /* Strict 20ms single frame per packet - eliminates 40ms buffering robotic noise */
+            /* G.711 uses 10 ms codec frames; AMR uses 20 ms frames. */
+            if (param.info.frm_ptime != 0 && 20 % param.info.frm_ptime == 0)
+                param.setting.frm_per_pkt = 20 / param.info.frm_ptime;
+            if (pj_strstr(&c[i].codec_id, &keep_amr)) {
+                /* Preserve Jio-compatible octet-aligned mode negotiation. */
+                param.setting.dec_fmtp.cnt = 2;
+                param.setting.dec_fmtp.param[0].name = pj_str((char*)"octet-align");
+                param.setting.dec_fmtp.param[0].val = pj_str((char*)"1");
+                param.setting.dec_fmtp.param[1].name = pj_str((char*)"mode-set");
+                param.setting.dec_fmtp.param[1].val =
+                    pj_strstr(&c[i].codec_id, &keep_amrwb)
+                    ? pj_str((char*)"0,1,2,3,4,5,6,7,8")
+                    : pj_str((char*)"0,1,2,3,4,5,6,7");
+            }
             param.setting.vad = 0;
             param.setting.cng = 0;
             param.setting.plc = 1;
@@ -1255,8 +1277,9 @@ static int run_b2bua_server() {
     }
 
     pjsua_media_config_default(&media_cfg);
-    media_cfg.clock_rate = 8000;
-    media_cfg.snd_clock_rate = 8000;
+    /* Preserve AMR-WB/G.722 bandwidth through the PCM conference bridge. */
+    media_cfg.clock_rate = wideband_enabled() ? 16000 : 8000;
+    media_cfg.snd_clock_rate = media_cfg.clock_rate;
     media_cfg.audio_frame_ptime = 20;
     media_cfg.ptime = 20;
     media_cfg.snd_auto_close_time = 0;
@@ -1273,6 +1296,9 @@ static int run_b2bua_server() {
         pjsua_destroy();
         return 1;
     }
+
+    PJ_LOG(3, (THIS_FILE, "Conference media clock: %u Hz; wideband mode %s",
+               media_cfg.clock_rate, wideband_enabled() ? "enabled" : "disabled"));
 
 #ifdef _WIN32
     std::thread(win32_pipe_server_thread).detach();

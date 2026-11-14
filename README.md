@@ -173,12 +173,16 @@ The B2BUA acts as a full SIP proxy:
 
 ### 🎙️ CRITICAL: Audio Quality & AMR Codec Configuration (Must Read)
 
-To achieve **crystal clear voice quality** and avoid robotic audio, muffled speech, or "transistor radio" distortion, configuring the audio codec in your softphone is **CRITICAL**:
+Use a codec supported by your softphone and the bridge. AMR-NB, PCMA and PCMU
+are narrowband; AMR-WB can carry wideband speech when the negotiated call path
+preserves it. Available codecs depend on the particular softphone build.
 
-#### 💡 Why `AMR/8000` is Important:
-1. **Carrier Native Codec**: Jio IMS transmits voice calls across the cellular VoLTE network using **AMR-NB (8 kHz, 12.2 kbps)** or **AMR-WB (16 kHz HD Voice)**.
-2. **Eliminates Double Transcoding**: When your softphone is configured to use legacy `PCMA` (G.711 A-law) or `PCMU`, audio undergoes lossy multi-stage conversion (`PCMA -> PCM -> AMR`). This mismatch can introduce robotic timbre, low volume, or garbled transistor noise.
-3. **Pristine End-to-End Audio**: When your softphone sends **`AMR/8000`** (or uncompressed **`L16/8000`**), voice packets stream directly and cleanly with **zero transcoding loss**.
+G.711 → PCM → AMR conversion is supported. Heavy static or recurring silent
+blocks indicate a media-processing problem, not an unavoidable consequence of
+using PCMA/PCMU. The conference bridge decodes and re-encodes audio even when
+both call legs negotiate AMR; it does not currently provide encoded-packet
+passthrough. See [Linux audio regression and source build](docs/linux-audio.md)
+for the isolated known-audio test and verified build procedure.
 
 #### 🪟 MicroSIP Audio Setup (Windows):
 In MicroSIP, click **Menu ➔ Settings (⚙️) ➔ Audio**:
@@ -196,6 +200,12 @@ In MicroSIP, click **Menu ➔ Settings (⚙️) ➔ Audio**:
 ---
 
 ## Building from Source
+
+For Linux ARM64 or AMD64, the [Docker source build](docs/linux-audio.md) compiles
+PJSIP with its standard build system and includes an isolated audio regression
+target. It does not reuse checked-in executables.
+For an opt-in G.722 client and 16 kHz conference, see the
+[wideband path and validation guide](docs/wideband.md).
 
 > **Note**: Stock PJSIP 2.15.1 is used with two small Jio IMS compatibility patches provided in `patches/` (applied automatically using `python apply_patches.py`). All B2BUA proxy logic is contained in `src/b2bua.cpp`.
 

@@ -71,3 +71,6 @@ desktop.ini
 .idea/
 *.suo
 *.user
+
+# Isolated audio regression captures
+test-results/
