@@ -15,27 +15,35 @@ RUN ./configure --prefix=/opt/pj --disable-video --disable-sound \
     --disable-libyuv --disable-ffmpeg --disable-v4l2 --disable-opus \
     --disable-libwebrtc --disable-sdl --disable-openh264 --disable-vpx \
     --disable-gsm-codec --disable-speex-codec --disable-speex-aec \
-    --disable-ilbc-codec --disable-g722-codec --disable-g7221-codec \
+    --disable-ilbc-codec --disable-g7221-codec \
     --disable-l16-codec CFLAGS='-O2 -fPIC' CXXFLAGS='-O2 -fPIC'
 RUN make dep && make -j2 lib && make install
 COPY src/b2bua.cpp /build/b2bua.cpp
 RUN g++ -std=c++17 -O2 /build/b2bua.cpp -o /build/b2bua \
     $(PKG_CONFIG_PATH=/opt/pj/lib/pkgconfig pkg-config --cflags --libs --static libpjproject)
 
-FROM debian:trixie-slim AS runtime-base
+FROM build AS reference-build
+COPY tests/audio/reference_resample.c /build/reference_resample.c
+RUN gcc -O2 /build/reference_resample.c -o /build/reference-resample \
+    $(PKG_CONFIG_PATH=/opt/pj/lib/pkgconfig pkg-config --cflags --libs --static libpjproject)
+
+FROM debian:trixie-slim AS runtime-deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl3t64 libstdc++6 ca-certificates \
     libopencore-amrnb0 libopencore-amrwb0 libvo-amrwbenc0 \
     && rm -rf /var/lib/apt/lists/*
-COPY --from=build /build/b2bua /usr/local/bin/b2bua
 USER 65532:65532
 WORKDIR /config
 ENTRYPOINT ["/usr/local/bin/b2bua"]
 
-FROM runtime-base AS test
+FROM runtime-deps AS test-deps
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-numpy ffmpeg openssl && rm -rf /var/lib/apt/lists/*
+FROM test-deps AS test
+COPY --from=reference-build /build/reference-resample /usr/local/bin/reference-resample
+COPY --from=build /build/b2bua /usr/local/bin/b2bua
 COPY tests/audio /app/tests/audio
 
-FROM runtime-base AS runtime
+FROM runtime-deps AS runtime
+COPY --from=build /build/b2bua /usr/local/bin/b2bua

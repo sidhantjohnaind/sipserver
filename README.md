@@ -204,6 +204,8 @@ In MicroSIP, click **Menu ➔ Settings (⚙️) ➔ Audio**:
 For Linux ARM64 or AMD64, the [Docker source build](docs/linux-audio.md) compiles
 PJSIP with its standard build system and includes an isolated audio regression
 target. It does not reuse checked-in executables.
+For an opt-in G.722 client and 16 kHz conference, see the
+[wideband path and validation guide](docs/wideband.md).
 
 > **Note**: Stock PJSIP 2.15.1 is used with two small Jio IMS compatibility patches provided in `patches/` (applied automatically using `python apply_patches.py`). All B2BUA proxy logic is contained in `src/b2bua.cpp`.
 

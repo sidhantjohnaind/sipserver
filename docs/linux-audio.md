@@ -93,7 +93,7 @@ publishing a subsequent release.
 ## Clarity and wideband limitations
 
 The verified live call negotiated PCMU/8 kHz locally and AMR-NB/8 kHz upstream.
-That remains narrowband audio even after the corruption is fixed. Higher
-clarity requires a wideband codec on the client and carrier legs and a media
-clock that preserves the wider bandwidth. This change does not claim to enable
-or verify an end-to-end wideband path.
+That remains narrowband audio even after the corruption is fixed. The separate
+[opt-in wideband path](wideband.md) enables G.722 and a 16 kHz conference. Real
+carrier calls must also negotiate AMR-WB to preserve the wider bandwidth;
+enabling the option alone does not establish end-to-end wideband quality.

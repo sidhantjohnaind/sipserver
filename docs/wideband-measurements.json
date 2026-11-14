@@ -1,0 +1,103 @@
+{
+  "positive_cases": [
+    {
+      "case": "amr-wb_to_amr-wb",
+      "input_pcm_rate": 16000,
+      "output_pcm_rate": 16000,
+      "tone_rms_min_max": 0.41587185917383046,
+      "high_low_band_ratio": 0.003954287973977079,
+      "reference_high_low_band_ratio": 0.012070847287472436,
+      "high_band_retention": 0.32758992635761225,
+      "high_low_band_db": -24.02931706050401,
+      "rtp_timestamp_steps": [
+        320
+      ],
+      "sequence_gaps": 0
+    },
+    {
+      "case": "amr-wb_to_g722",
+      "input_pcm_rate": 16000,
+      "output_pcm_rate": 16000,
+      "tone_rms_min_max": 0.6851073710752831,
+      "high_low_band_ratio": 0.012221683566823908,
+      "reference_high_low_band_ratio": 0.012070847287472436,
+      "high_band_retention": 1.0124959148069097,
+      "high_low_band_db": -19.12868964844739,
+      "rtp_timestamp_steps": [
+        160
+      ],
+      "sequence_gaps": 0
+    },
+    {
+      "case": "g722_to_amr",
+      "input_pcm_rate": 16000,
+      "output_pcm_rate": 8000,
+      "tone_rms_min_max": 0.6008002577876036,
+      "high_low_band_ratio": 0.0,
+      "reference_high_low_band_ratio": 0.5005060034781278,
+      "high_band_retention": 0.0,
+      "high_low_band_db": -200.0,
+      "rtp_timestamp_steps": [
+        160
+      ],
+      "sequence_gaps": 0
+    },
+    {
+      "case": "g722_to_amr-wb",
+      "input_pcm_rate": 16000,
+      "output_pcm_rate": 16000,
+      "tone_rms_min_max": 0.8972498084038546,
+      "high_low_band_ratio": 0.2973444325149219,
+      "reference_high_low_band_ratio": 0.5005060034781278,
+      "high_band_retention": 0.5940876442012866,
+      "high_low_band_db": -5.267401888300276,
+      "rtp_timestamp_steps": [
+        320
+      ],
+      "sequence_gaps": 0
+    },
+    {
+      "case": "g722_to_g722",
+      "input_pcm_rate": 16000,
+      "output_pcm_rate": 16000,
+      "tone_rms_min_max": 0.9956971750999697,
+      "high_low_band_ratio": 0.4946718978124729,
+      "reference_high_low_band_ratio": 0.5005060034781278,
+      "high_band_retention": 0.988343585041713,
+      "high_low_band_db": -3.0568276109657626,
+      "rtp_timestamp_steps": [
+        160
+      ],
+      "sequence_gaps": 0
+    },
+    {
+      "case": "pcma_to_amr-wb",
+      "input_pcm_rate": 8000,
+      "output_pcm_rate": 16000,
+      "tone_rms_min_max": 0.8732081258155227,
+      "high_low_band_ratio": 2.435968683210141e-06,
+      "reference_high_low_band_ratio": 0.0,
+      "high_band_retention": null,
+      "high_low_band_db": -56.13328299288937,
+      "rtp_timestamp_steps": [
+        320
+      ],
+      "sequence_gaps": 0
+    }
+  ],
+  "negative_control": {
+    "case": "amr-wb_to_amr-wb",
+    "input_pcm_rate": 16000,
+    "output_pcm_rate": 16000,
+    "tone_rms_min_max": 0.538931249731675,
+    "high_low_band_ratio": 5.423377387583189e-07,
+    "reference_high_low_band_ratio": 0.012070847287472439,
+    "high_band_retention": 4.4929550166803665e-05,
+    "high_low_band_db": -62.6573017398196,
+    "rtp_timestamp_steps": [
+      320
+    ],
+    "sequence_gaps": 0
+  },
+  "high_band_improvement_db": 38.62798467931559
+}
